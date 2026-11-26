@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "coinguon",
+  "compatibility_date": "2026-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "coinguon-db",
+      "database_id": "4bc393f3-e6fe-4780-8a5e-773e70906ca5",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}

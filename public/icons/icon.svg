@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7f1d1d" />
+      <stop offset="100%" stop-color="#991b1b" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#facc15" />
+      <stop offset="100%" stop-color="#ca8a04" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Nền đỏ truyền thống bo góc tròn -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  
+  <!-- Vòng tròn kim sắc bao quanh tượng trưng cho sự trường tồn -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="url(#gold)" stroke-width="10" stroke-dasharray="16 8" opacity="0.8" />
+  <circle cx="256" cy="256" r="195" fill="none" stroke="url(#gold)" stroke-width="3" />
+
+  <!-- Biểu tượng cuốn thư cổ / cây gia phả vàng son -->
+  <g fill="url(#gold)">
+    <!-- Đỉnh cuốn thư -->
+    <path d="M160 140 C220 125, 292 125, 352 140 C370 144, 380 160, 376 178 L366 220 C310 205, 202 205, 146 220 L136 178 C132 160, 142 144, 160 140 Z" opacity="0.9" />
+    
+    <!-- Thân biểu tượng cây cội nguồn -->
+    <!-- Thân cây tổ -->
+    <rect x="244" y="220" width="24" height="150" rx="12" />
+    
+    <!-- Nhánh rễ và cành thế hệ -->
+    <path d="M256 260 C210 260, 180 230, 170 200 C185 240, 220 275, 256 275 C292 275, 327 240, 342 200 C332 230, 302 260, 256 260 Z" />
+    <path d="M256 310 C190 310, 150 280, 140 250 C160 295, 205 325, 256 325 C307 325, 352 295, 372 250 C362 280, 322 310, 256 310 Z" />
+
+    <!-- 3 Quả / Nút thế hệ (Tổ - Tông - Phụ - Tử) -->
+    <circle cx="256" cy="170" r="22" />
+    <circle cx="180" cy="230" r="18" />
+    <circle cx="332" cy="230" r="18" />
+    <circle cx="150" cy="290" r="16" />
+    <circle cx="362" cy="290" r="16" />
+    
+    <!-- Chân đế vững chãi -->
+    <path d="M180 370 C220 360, 292 360, 332 370 C345 373, 350 385, 345 395 C310 405, 202 405, 167 395 C162 385, 167 373, 180 370 Z" />
+  </g>
+
+  <!-- Chữ "GIA PHẢ" trang trọng -->
+  <text x="256" y="445" font-family="sans-serif" font-size="34" font-weight="900" fill="url(#gold)" text-anchor="middle" letter-spacing="4">CỘI NGUỒN</text>
+</svg>
+
