@@ -1,9 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Xuất build sang thư mục 'build' thay vì '.next' để tránh xung đột khi chạy dev và build đồng thời
+  // Dùng .next-dev khi dev và .next khi build production (tương thích OpenNext Cloudflare)
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   allowedDevOrigins: ['192.168.40.54'],
+  images: {
+    unoptimized: true,
+  },
+  serverExternalPackages: ['@libsql/client', 'libsql'],
   experimental: {
     agentUpgrade: "security",
   },

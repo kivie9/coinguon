@@ -1,8 +1,19 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "coinguon",
+  "main": ".open-next/worker.js",
   "compatibility_date": "2026-01-01",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "coinguon"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
@@ -10,5 +21,8 @@
       "database_id": "4bc393f3-e6fe-4780-8a5e-773e70906ca5",
       "migrations_dir": "drizzle"
     }
-  ]
+  ],
+  "vars": {
+    "DB_ENABLED": "true"
+  }
 }
