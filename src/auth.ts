@@ -31,7 +31,7 @@ declare module 'next-auth' {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
     trustHost: true,
-    secret: process.env.AUTH_SECRET || 'coinguon-dev-secret-change-in-production',
+    secret: process.env.AUTH_SECRET,
     session: {
         strategy: 'jwt',
         maxAge: 60 * 60 * 24 * 7, // 7 ngày

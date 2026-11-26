@@ -38,8 +38,9 @@ function LoginForm() {
 
     const fillAccount = (accEmail: string) => {
         setEmail(accEmail);
-        setPassword('123456');
     };
+
+    const showDevAccounts = process.env.NODE_ENV === 'development';
 
     return (
         <div className="bg-surface-container-lowest rounded-2xl p-6 sm:p-8 space-y-6">
@@ -55,45 +56,47 @@ function LoginForm() {
                 </p>
             </div>
 
-            <div className="p-3.5 bg-surface-container-low rounded-xl space-y-2.5">
-                <p className="text-xs font-semibold text-on-surface-variant">
-                    Chọn tài khoản mẫu để điền nhanh:
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                    <button
-                        type="button"
-                        onClick={() => fillAccount('admin@coinguon.vn')}
-                        className="text-left p-2.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container transition-colors duration-150 cursor-pointer group"
-                    >
-                        <span className="text-xs font-bold text-on-surface block group-hover:text-primary">Admin Tối Cao</span>
-                        <span className="text-xs text-on-surface-variant truncate block">admin@coinguon.vn</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => fillAccount('quantri@coinguon.vn')}
-                        className="text-left p-2.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container transition-colors duration-150 cursor-pointer group"
-                    >
-                        <span className="text-xs font-bold text-on-surface block group-hover:text-primary">Quản Trị Tộc</span>
-                        <span className="text-xs text-on-surface-variant truncate block">quantri@coinguon.vn</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => fillAccount('chicuong@coinguon.vn')}
-                        className="text-left p-2.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container transition-colors duration-150 cursor-pointer group"
-                    >
-                        <span className="text-xs font-bold text-on-surface block group-hover:text-primary">Trưởng Chi 2</span>
-                        <span className="text-xs text-on-surface-variant truncate block">chicuong@coinguon.vn</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => fillAccount('thanhvien@coinguon.vn')}
-                        className="text-left p-2.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container transition-colors duration-150 cursor-pointer group"
-                    >
-                        <span className="text-xs font-bold text-on-surface block group-hover:text-primary">Thành Viên</span>
-                        <span className="text-xs text-on-surface-variant truncate block">thanhvien@coinguon.vn</span>
-                    </button>
+            {showDevAccounts && (
+                <div className="p-3.5 bg-surface-container-low rounded-xl space-y-2.5">
+                    <p className="text-xs font-semibold text-on-surface-variant">
+                        Chọn email mẫu (chỉ hiện ở môi trường dev):
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                        <button
+                            type="button"
+                            onClick={() => fillAccount('admin@coinguon.vn')}
+                            className="text-left p-2.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container transition-colors duration-150 cursor-pointer group"
+                        >
+                            <span className="text-xs font-bold text-on-surface block group-hover:text-primary">Admin Tối Cao</span>
+                            <span className="text-xs text-on-surface-variant truncate block">admin@coinguon.vn</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => fillAccount('quantri@coinguon.vn')}
+                            className="text-left p-2.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container transition-colors duration-150 cursor-pointer group"
+                        >
+                            <span className="text-xs font-bold text-on-surface block group-hover:text-primary">Quản Trị Tộc</span>
+                            <span className="text-xs text-on-surface-variant truncate block">quantri@coinguon.vn</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => fillAccount('chicuong@coinguon.vn')}
+                            className="text-left p-2.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container transition-colors duration-150 cursor-pointer group"
+                        >
+                            <span className="text-xs font-bold text-on-surface block group-hover:text-primary">Trưởng Chi 2</span>
+                            <span className="text-xs text-on-surface-variant truncate block">chicuong@coinguon.vn</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => fillAccount('thanhvien@coinguon.vn')}
+                            className="text-left p-2.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container transition-colors duration-150 cursor-pointer group"
+                        >
+                            <span className="text-xs font-bold text-on-surface block group-hover:text-primary">Thành Viên</span>
+                            <span className="text-xs text-on-surface-variant truncate block">thanhvien@coinguon.vn</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-1.5">
@@ -113,10 +116,7 @@ function LoginForm() {
                 </div>
 
                 <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="login-password" className="text-sm font-semibold text-on-surface">Mật khẩu</Label>
-                        <span className="text-xs text-on-surface-variant tabular-nums">Mặc định: 123456</span>
-                    </div>
+                    <Label htmlFor="login-password" className="text-sm font-semibold text-on-surface">Mật khẩu</Label>
                     <div className="relative">
                         <Lock className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-outline" aria-hidden="true" />
                         <Input

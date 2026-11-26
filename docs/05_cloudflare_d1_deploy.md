@@ -30,7 +30,7 @@ npm run db setup
 npm run dev
 ```
 
-**4 tài khoản mẫu (mật khẩu mặc định `123456`):**
+**4 tài khoản mẫu (mật khẩu lấy từ biến môi trường `SEED_DEFAULT_PASSWORD` trong `.env.local` khi chạy seed):**
 - `admin@coinguon.vn` (`SUPER_ADMIN`)
 - `quantri@coinguon.vn` (`CLAN_ADMIN`)
 - `chicuong@coinguon.vn` (`BRANCH_ADMIN`)

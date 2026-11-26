@@ -421,7 +421,7 @@ export async function runSeed() {
         ]);
 
         // ====================================================================
-        // 6. QUỸ DÒNG HỌ, BẢN TIN & 4 TÀI KHOẢN AUTH.JS (MẬT KHẨU: 123456)
+        // 6. QUỸ DÒNG HỌ, BẢN TIN & 4 TÀI KHOẢN AUTH.JS
         // ====================================================================
         console.log('💰 [7/7] Khởi tạo Quỹ dòng họ, Bản tin & Tài khoản Auth.js...');
         const [fund1] = await db
@@ -512,7 +512,13 @@ export async function runSeed() {
             },
         ]);
 
-        const defaultPasswordHash = await hashPassword('123456');
+        const seedPassword = process.env.SEED_DEFAULT_PASSWORD;
+        if (!seedPassword || seedPassword.length < 6) {
+            throw new Error(
+                'Thiếu biến môi trường SEED_DEFAULT_PASSWORD (tối thiểu 6 ký tự) trong .env.local trước khi chạy seed.'
+            );
+        }
+        const defaultPasswordHash = await hashPassword(seedPassword);
 
         await db.insert(users).values([
             {
@@ -553,7 +559,7 @@ export async function runSeed() {
             },
         ]);
 
-        console.log('\n🎉 [HOÀN TẤT] Seed 10 đời Lê Tộc & 4 tài khoản Auth.js (mật khẩu: 123456) thành công!');
+        console.log('\n🎉 [HOÀN TẤT] Seed 10 đời Lê Tộc & 4 tài khoản Auth.js thành công!');
     } catch (error) {
         console.error('❌ Lỗi khi khởi tạo seed data:', error);
         process.exit(1);
