@@ -9,8 +9,10 @@
     "lint": "eslint",
     "db": "tsx scripts/db.ts",
     "cf:build": "opennextjs-cloudflare build",
+    "cf:migrate": "wrangler d1 migrations apply coinguon-db --remote",
     "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "deploy": "wrangler d1 migrations apply coinguon-db --remote && opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
