@@ -5,6 +5,8 @@ import { ShieldAlert, ArrowLeft } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import { getServerAuth } from '@/utils/auth';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
     title: 'Quản Trị Phả Hệ | Gia Tộc Họ Lê',
     description: 'Hệ thống quản trị đinh bộ, phả ký và quỹ hương hỏa gia tộc.',
