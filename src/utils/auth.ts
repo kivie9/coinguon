@@ -11,6 +11,7 @@ export interface AuthContext {
     isGuest: boolean;
     isAdmin: boolean;
     isSuperAdmin: boolean;
+    branchId: number | null;
 }
 
 const GUEST_CONTEXT: AuthContext = {
@@ -19,6 +20,7 @@ const GUEST_CONTEXT: AuthContext = {
     isGuest: true,
     isAdmin: false,
     isSuperAdmin: false,
+    branchId: null,
 };
 
 async function buildAuthContextFromSession(): Promise<AuthContext> {
@@ -44,7 +46,7 @@ async function buildAuthContextFromSession(): Promise<AuthContext> {
             });
 
             if (dbUser) {
-                if (dbUser.status === 'LOCKED') {
+                if (dbUser.status !== 'ACTIVE') {
                     return GUEST_CONTEXT;
                 }
 
@@ -57,6 +59,7 @@ async function buildAuthContextFromSession(): Promise<AuthContext> {
                     role,
                     isAdmin,
                     isSuperAdmin,
+                    branchId: dbUser.member?.branchId ?? null,
                     user: {
                         id: dbUser.id,
                         email: dbUser.email,
@@ -93,6 +96,7 @@ async function buildAuthContextFromSession(): Promise<AuthContext> {
             role,
             isAdmin,
             isSuperAdmin,
+            branchId: null,
             user: {
                 id: sessionUser.dbId || 0,
                 email: sessionUser.email,
@@ -129,7 +133,12 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<AuthCo
         return sessionAuth;
     }
 
-    const demoRoleHeader = request.headers.get('x-demo-role') as UserRole | null;
+    // Chỉ cho phép x-demo-role trong môi trường phát triển (development) hoặc khi bật ALLOW_DEMO_ROLE=true
+    const allowDemoRole =
+        process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEMO_ROLE === 'true';
+    const demoRoleHeader = allowDemoRole
+        ? (request.headers.get('x-demo-role') as UserRole | null)
+        : null;
     if (demoRoleHeader && ['MEMBER', 'BRANCH_ADMIN', 'CLAN_ADMIN', 'SUPER_ADMIN'].includes(demoRoleHeader)) {
         const isSuperAdmin = demoRoleHeader === 'SUPER_ADMIN';
         const isAdmin = isSuperAdmin || demoRoleHeader === 'CLAN_ADMIN' || demoRoleHeader === 'BRANCH_ADMIN';
@@ -139,6 +148,7 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<AuthCo
             role: demoRoleHeader,
             isAdmin,
             isSuperAdmin,
+            branchId: null,
             user: {
                 id: 999,
                 email: `${demoRoleHeader.toLowerCase()}@coinguon.vn`,

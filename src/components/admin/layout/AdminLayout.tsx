@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminHeader } from './AdminHeader';
 import { useAuth } from '@/components/providers/AuthProvider';
@@ -14,14 +15,23 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children }: AdminLayoutProps) {
+    const router = useRouter();
     const { isAdmin, isGuest, isLoading } = useAuth();
     const [authModalOpen, setAuthModalOpen] = useState(false);
 
-    if (isLoading) {
+    useEffect(() => {
+        if (!isLoading && isGuest) {
+            router.replace('/login?redirect=/admin');
+        }
+    }, [isLoading, isGuest, router]);
+
+    if (isLoading || isGuest) {
         return (
             <div className="min-h-dvh bg-surface flex flex-col items-center justify-center text-on-surface">
                 <div className="size-10 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" aria-hidden="true" />
-                <p className="text-sm font-medium text-on-surface-variant">Đang kiểm tra quyền truy cập hệ thống...</p>
+                <p className="text-sm font-medium text-on-surface-variant">
+                    {isGuest ? 'Đang chuyển hướng đến trang đăng nhập...' : 'Đang kiểm tra quyền truy cập hệ thống...'}
+                </p>
             </div>
         );
     }

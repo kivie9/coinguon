@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Wallet,
     ArrowDownLeft,
@@ -8,9 +8,13 @@ import {
     PlusCircle,
     Search,
     CheckCircle2,
+    Pencil,
+    Trash2,
+    Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Table,
@@ -22,6 +26,7 @@ import {
 } from '@/components/ui/table';
 import {
     Dialog,
+    DialogBody,
     DialogContent,
     DialogHeader,
     DialogTitle,
@@ -29,31 +34,51 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/sonner';
-import { FundTransaction as Transaction, INITIAL_FUND_TRANSACTIONS } from '@/config/fundData';
+import { FundTransaction as Transaction, FundOverview } from '@/config/fundData';
+import { apiFetch } from '@/services/api/apiClient';
+import { exportToCsv } from '@/utils/exportCsv';
 
 export function AdminFundManager() {
-    const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_FUND_TRANSACTIONS);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [overview, setOverview] = useState<FundOverview | null>(null);
+    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
 
-    React.useEffect(() => {
-        fetch('/api/funds')
-            .then((res) => res.json())
-            .then((res) => {
-                if (res.data?.transactions) {
-                    setTransactions(res.data.transactions);
-                }
-            })
-            .catch(() => {});
-    }, []);
-
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+    const [saving, setSaving] = useState(false);
+
     const [formType, setFormType] = useState<'INCOME' | 'EXPENSE'>('INCOME');
     const [formTitle, setFormTitle] = useState('');
     const [formContributor, setFormContributor] = useState('');
     const [formBranch, setFormBranch] = useState('Chi Trưởng');
     const [formAmount, setFormAmount] = useState('');
     const [formNote, setFormNote] = useState('');
+
+    const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    const loadFunds = useCallback(async () => {
+        try {
+            setLoading(true);
+            const res = await apiFetch('/api/funds', { cache: 'no-store' });
+            if (res.ok) {
+                const json = await res.json();
+                if (json.data?.transactions) setTransactions(json.data.transactions);
+                if (json.data?.overview) setOverview(json.data.overview);
+            }
+        } catch (err) {
+            console.error('Lỗi tải dữ liệu quỹ:', err);
+            toast.error('Không thể tải dữ liệu sổ quỹ.');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadFunds();
+    }, [loadFunds]);
 
     const totalIncome = transactions
         .filter((t) => t.type === 'INCOME')
@@ -63,7 +88,7 @@ export function AdminFundManager() {
         .filter((t) => t.type === 'EXPENSE')
         .reduce((sum, t) => sum + t.amount, 0);
 
-    const balance = totalIncome - totalExpense + 125000000;
+    const balance = overview ? overview.currentAmount : totalIncome - totalExpense;
 
     const filtered = transactions.filter((t) => {
         if (typeFilter !== 'ALL' && t.type !== typeFilter) return false;
@@ -77,11 +102,33 @@ export function AdminFundManager() {
         return true;
     });
 
-    const handleCreateTransaction = (e: React.FormEvent) => {
+    const openCreateDialog = () => {
+        setEditingTx(null);
+        setFormType('INCOME');
+        setFormTitle('');
+        setFormContributor('');
+        setFormBranch('Chi Trưởng');
+        setFormAmount('');
+        setFormNote('');
+        setDialogOpen(true);
+    };
+
+    const openEditDialog = (tx: Transaction) => {
+        setEditingTx(tx);
+        setFormType(tx.type);
+        setFormTitle(tx.title);
+        setFormContributor(tx.contributor);
+        setFormBranch(tx.branch || 'Chi Trưởng');
+        setFormAmount(String(tx.amount));
+        setFormNote(tx.note || '');
+        setDialogOpen(true);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const amt = parseFloat(formAmount.replace(/[^0-9]/g, ''));
         if (!amt || isNaN(amt) || amt <= 0) {
-            toast.error('Vui lòng nhập số tiền hợp lệ.');
+            toast.error('Vui lòng nhập số tiền hợp lệ lớn hơn 0.');
             return;
         }
         if (!formTitle.trim()) {
@@ -89,34 +136,86 @@ export function AdminFundManager() {
             return;
         }
 
-        const newTx: Transaction = {
-            id: `TX-${Date.now().toString().slice(-4)}`,
+        const payload = {
             type: formType,
             title: formTitle.trim(),
             contributor: formContributor.trim() || 'Thành viên gia tộc',
             branch: formBranch,
             amount: amt,
-            date: new Date().toLocaleDateString('vi-VN'),
             note: formNote.trim() || 'Ghi nhận qua hệ thống Admin',
         };
 
-        fetch('/api/funds', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newTx),
-        }).catch(() => {});
+        try {
+            setSaving(true);
+            const url = editingTx ? `/api/funds/${encodeURIComponent(editingTx.id)}` : '/api/funds';
+            const method = editingTx ? 'PUT' : 'POST';
 
-        setTransactions((prev) => [newTx, ...prev]);
-        toast.success(
-            formType === 'INCOME'
-                ? `Đã ghi nhận khoản thu ${amt.toLocaleString('vi-VN')} VNĐ vào quỹ họ!`
-                : `Đã ghi nhận phiếu chi ${amt.toLocaleString('vi-VN')} VNĐ thành công!`
+            const res = await apiFetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const json = await res.json();
+
+            if (!res.ok || !json.success) {
+                toast.error(json.message || 'Không thể lưu phiếu thu/chi.');
+                return;
+            }
+
+            toast.success(
+                editingTx
+                    ? 'Đã cập nhật phiếu thu/chi thành công!'
+                    : formType === 'INCOME'
+                      ? `Đã ghi nhận khoản thu ${amt.toLocaleString('vi-VN')} VNĐ vào quỹ họ!`
+                      : `Đã ghi nhận phiếu chi ${amt.toLocaleString('vi-VN')} VNĐ thành công!`
+            );
+            setDialogOpen(false);
+            await loadFunds();
+        } catch {
+            toast.error('Lỗi kết nối khi lưu giao dịch quỹ.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deletingTx) return;
+        try {
+            setDeleting(true);
+            const res = await apiFetch(`/api/funds/${encodeURIComponent(deletingTx.id)}`, {
+                method: 'DELETE',
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) {
+                toast.error(json.message || 'Không thể xóa giao dịch.');
+                return;
+            }
+            toast.success(`Đã xóa phiếu ${deletingTx.id}.`);
+            setDeletingTx(null);
+            await loadFunds();
+        } catch {
+            toast.error('Lỗi kết nối khi xóa giao dịch.');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    const handleExportCsv = () => {
+        exportToCsv(
+            `so-quy-dong-ho-${new Date().toISOString().split('T')[0]}`,
+            ['Mã phiếu', 'Loại', 'Nội dung', 'Người / Đơn vị', 'Chi phái', 'Ngày', 'Số tiền (VNĐ)', 'Ghi chú'],
+            filtered.map((tx) => [
+                tx.id,
+                tx.type === 'INCOME' ? 'Thu' : 'Chi',
+                tx.title,
+                tx.contributor,
+                tx.branch,
+                tx.date,
+                tx.type === 'INCOME' ? tx.amount : -tx.amount,
+                tx.note,
+            ])
         );
-        setDialogOpen(false);
-        setFormTitle('');
-        setFormContributor('');
-        setFormAmount('');
-        setFormNote('');
+        toast.success('Đã xuất file sổ quỹ CSV (hỗ trợ mở trực tiếp bằng Excel).');
     };
 
     return (
@@ -128,18 +227,28 @@ export function AdminFundManager() {
                         <Wallet className="size-6 text-secondary" aria-hidden="true" />
                         <span>Sổ Quỹ Dòng Họ &amp; Hương Hỏa</span>
                     </h2>
-                    <p className="text-sm text-on-surface-variant mt-0.5">
+                    <p className="text-sm text-on-surface-variant mt-0.5 text-pretty">
                         Minh bạch các khoản công đức, thu chi tu bổ từ đường và khuyến học họ tộc
                     </p>
                 </div>
 
-                <Button
-                    onClick={() => setDialogOpen(true)}
-                    className="min-h-11 px-4 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-semibold text-sm shrink-0 transition-colors duration-150 cursor-pointer"
-                >
-                    <PlusCircle className="size-4 mr-2" aria-hidden="true" />
-                    <span>Lập Phiếu Thu / Chi</span>
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                        variant="ghost"
+                        onClick={handleExportCsv}
+                        className="min-h-11 px-4 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-semibold text-sm cursor-pointer"
+                    >
+                        <Download className="size-4 mr-2" aria-hidden="true" />
+                        <span>Xuất Excel (CSV)</span>
+                    </Button>
+                    <Button
+                        onClick={openCreateDialog}
+                        className="min-h-11 px-4 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-semibold text-sm shrink-0 transition-colors duration-150 cursor-pointer"
+                    >
+                        <PlusCircle className="size-4 mr-2" aria-hidden="true" />
+                        <span>Lập Phiếu Thu / Chi</span>
+                    </Button>
+                </div>
             </div>
 
             {/* Fund Summary Metrics */}
@@ -153,7 +262,7 @@ export function AdminFundManager() {
                     </h3>
                     <p className="text-xs text-on-primary/85 mt-1 flex items-center gap-1.5">
                         <CheckCircle2 className="size-3.5 text-secondary-fixed shrink-0" aria-hidden="true" />
-                        <span>Đã đối soát sổ sách tháng hiện tại</span>
+                        <span>Đồng bộ trực tiếp từ sổ thu chi</span>
                     </p>
                 </Card>
 
@@ -197,7 +306,7 @@ export function AdminFundManager() {
                 <CardHeader className="p-5 pb-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <CardTitle className="font-serif text-base font-bold text-primary">
-                            Lịch Sử Thu Chi Gần Đây
+                            Lịch Sử Thu Chi ({filtered.length})
                         </CardTitle>
                         <div className="flex items-center gap-2">
                             <div className="relative w-48 sm:w-64">
@@ -210,16 +319,19 @@ export function AdminFundManager() {
                                     className="pl-9 h-10 text-xs rounded-xl border-outline-variant/60 bg-surface"
                                 />
                             </div>
-                            <select
-                                aria-label="Lọc loại giao dịch"
-                                value={typeFilter}
-                                onChange={(e) => setTypeFilter(e.target.value as 'ALL' | 'INCOME' | 'EXPENSE')}
-                                className="h-10 rounded-xl border border-outline-variant/60 bg-surface px-3 text-xs text-on-surface focus-visible:outline-none focus-visible:border-primary"
-                            >
-                                <option value="ALL">Tất cả</option>
-                                <option value="INCOME">Tiền Thu (+)</option>
-                                <option value="EXPENSE">Tiền Chi (-)</option>
-                            </select>
+                            <div className="w-40 shrink-0">
+                                <Select
+                                    aria-label="Lọc loại giao dịch"
+                                    value={typeFilter}
+                                    onValueChange={(v) => setTypeFilter(v as 'ALL' | 'INCOME' | 'EXPENSE')}
+                                    options={[
+                                        { value: 'ALL', label: 'Tất cả' },
+                                        { value: 'INCOME', label: 'Tiền Thu (+)' },
+                                        { value: 'EXPENSE', label: 'Tiền Chi (-)' },
+                                    ]}
+                                    className="bg-surface text-xs"
+                                />
+                            </div>
                         </div>
                     </div>
                 </CardHeader>
@@ -227,41 +339,47 @@ export function AdminFundManager() {
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-surface-container-low border-b border-outline-variant/30">
-                                <TableHead className="w-20">Mã</TableHead>
+                                <TableHead className="w-24">Mã</TableHead>
                                 <TableHead>Nội Dung</TableHead>
                                 <TableHead>Người / Đơn Vị</TableHead>
                                 <TableHead>Chi Phái</TableHead>
                                 <TableHead>Ngày</TableHead>
                                 <TableHead className="text-right">Số Tiền (VNĐ)</TableHead>
+                                <TableHead className="text-right w-24">Thao Tác</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filtered.length === 0 ? (
+                            {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center text-on-surface-variant">
+                                    <TableCell colSpan={7} className="h-24 text-center text-on-surface-variant">
+                                        Đang tải sổ quỹ...
+                                    </TableCell>
+                                </TableRow>
+                            ) : filtered.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="h-24 text-center text-on-surface-variant">
                                         Không tìm thấy giao dịch nào.
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 filtered.map((tx) => (
-                                    <TableRow key={tx.id} className="hover:bg-surface-container-low/60 border-b border-outline-variant/20 tabular-nums">
+                                    <TableRow
+                                        key={tx.id}
+                                        className="hover:bg-surface-container-low/60 border-b border-outline-variant/20 tabular-nums"
+                                    >
                                         <TableCell className="font-mono text-xs text-on-surface-variant font-semibold">
                                             {tx.id}
                                         </TableCell>
-                                        <TableCell className="font-sans">
-                                            <p className="font-bold text-sm text-on-surface">{tx.title}</p>
-                                            <p className="text-xs text-on-surface-variant">{tx.note}</p>
+                                        <TableCell>
+                                            <p className="font-semibold text-sm text-on-surface">{tx.title}</p>
+                                            {tx.note && (
+                                                <p className="text-xs text-on-surface-variant truncate max-w-xs">{tx.note}</p>
+                                            )}
                                         </TableCell>
-                                        <TableCell className="text-xs font-semibold text-on-surface font-sans">
-                                            {tx.contributor}
-                                        </TableCell>
-                                        <TableCell className="text-xs text-secondary font-medium font-sans">
-                                            {tx.branch}
-                                        </TableCell>
-                                        <TableCell className="text-xs text-on-surface-variant">
-                                            {tx.date}
-                                        </TableCell>
-                                        <TableCell className="text-right font-mono font-bold text-sm">
+                                        <TableCell className="text-sm text-on-surface">{tx.contributor}</TableCell>
+                                        <TableCell className="text-xs text-on-surface-variant">{tx.branch}</TableCell>
+                                        <TableCell className="text-xs text-on-surface-variant">{tx.date}</TableCell>
+                                        <TableCell className="text-right font-bold text-sm">
                                             <span
                                                 className={
                                                     tx.type === 'INCOME'
@@ -273,6 +391,28 @@ export function AdminFundManager() {
                                                 {tx.amount.toLocaleString('vi-VN')} đ
                                             </span>
                                         </TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="inline-flex items-center gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    aria-label={`Sửa phiếu ${tx.id}`}
+                                                    onClick={() => openEditDialog(tx)}
+                                                    className="size-8 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface cursor-pointer"
+                                                >
+                                                    <Pencil className="size-3.5" aria-hidden="true" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    aria-label={`Xóa phiếu ${tx.id}`}
+                                                    onClick={() => setDeletingTx(tx)}
+                                                    className="size-8 rounded-lg bg-surface-container-low hover:bg-primary/10 text-primary cursor-pointer"
+                                                >
+                                                    <Trash2 className="size-3.5" aria-hidden="true" />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             )}
@@ -281,133 +421,166 @@ export function AdminFundManager() {
                 </div>
             </Card>
 
-            {/* Modal Lập Phiếu */}
+            {/* Dialog Lập / Sửa Phiếu */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="max-w-md bg-surface rounded-2xl border-0 p-6">
+                <DialogContent size="lg" stickyLayout>
                     <DialogHeader>
-                        <DialogTitle className="font-serif text-lg font-bold text-primary">
-                            Lập Phiếu Thu / Chi Quỹ Họ
+                        <DialogTitle>
+                            {editingTx ? `Chỉnh Sửa Phiếu ${editingTx.id}` : 'Lập Phiếu Thu / Chi Mới'}
                         </DialogTitle>
                     </DialogHeader>
 
-                    <form onSubmit={handleCreateTransaction} className="space-y-4 py-2">
-                        <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-on-surface">Loại Phiếu</Label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    className={`min-h-10 rounded-xl text-xs font-semibold cursor-pointer ${
-                                        formType === 'INCOME'
-                                            ? 'bg-emerald-700 text-white hover:bg-emerald-700 hover:text-white'
-                                            : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
-                                    }`}
-                                    onClick={() => setFormType('INCOME')}
-                                >
-                                    + Thu Quỹ / Công Đức
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    className={`min-h-10 rounded-xl text-xs font-semibold cursor-pointer ${
-                                        formType === 'EXPENSE'
-                                            ? 'bg-primary text-on-primary hover:bg-primary hover:text-on-primary'
-                                            : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
-                                    }`}
-                                    onClick={() => setFormType('EXPENSE')}
-                                >
-                                    - Chi Phí / Tu Bổ
-                                </Button>
-                            </div>
+                    <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                        <DialogBody className="space-y-5">
+                        <div className="grid grid-cols-2 gap-3 p-1.5 rounded-xl bg-surface-container-low">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setFormType('INCOME')}
+                                className={`min-h-11 rounded-lg font-semibold text-sm cursor-pointer ${
+                                    formType === 'INCOME'
+                                        ? 'bg-emerald-700 text-white hover:bg-emerald-800'
+                                        : 'bg-transparent text-on-surface hover:bg-surface-container'
+                                }`}
+                            >
+                                Phiếu Thu / Công Đức (+)
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setFormType('EXPENSE')}
+                                className={`min-h-11 rounded-lg font-semibold text-sm cursor-pointer ${
+                                    formType === 'EXPENSE'
+                                        ? 'bg-primary text-on-primary hover:bg-primary-container'
+                                        : 'bg-transparent text-on-surface hover:bg-surface-container'
+                                }`}
+                            >
+                                Phiếu Chi / Tu Bổ (-)
+                            </Button>
                         </div>
 
-                        <div className="space-y-1.5">
-                            <Label htmlFor="formTitle" className="text-xs font-semibold text-on-surface">
-                                Nội Dung Khoản Thu / Chi
-                            </Label>
-                            <Input
-                                id="formTitle"
-                                placeholder="Ví dụ: Công đức xây dựng từ đường"
-                                value={formTitle}
-                                onChange={(e) => setFormTitle(e.target.value)}
-                                required
-                                className="h-10 rounded-xl border-outline-variant/60 bg-surface-container-lowest"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                                <Label htmlFor="formContributor" className="text-xs font-semibold text-on-surface">
-                                    Người Đóng Góp / Người Nhận
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="md:col-span-2 space-y-1.5">
+                                <Label htmlFor="fundTitle" className="text-sm font-semibold text-on-surface">
+                                    Nội dung thu / chi *
                                 </Label>
                                 <Input
-                                    id="formContributor"
-                                    placeholder="Họ tên người..."
-                                    value={formContributor}
-                                    onChange={(e) => setFormContributor(e.target.value)}
-                                    className="h-10 rounded-xl border-outline-variant/60 bg-surface-container-lowest"
+                                    id="fundTitle"
+                                    required
+                                    placeholder="Ví dụ: Công đức tu bổ nhà thờ họ..."
+                                    value={formTitle}
+                                    onChange={(e) => setFormTitle(e.target.value)}
+                                    className="h-11 rounded-xl border-outline-variant/60 bg-surface-container-lowest text-sm"
                                 />
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label htmlFor="formBranch" className="text-xs font-semibold text-on-surface">
-                                    Chi Họ
+                                <Label htmlFor="fundAmount" className="text-sm font-semibold text-on-surface">
+                                    Số tiền (VNĐ) *
                                 </Label>
                                 <Input
-                                    id="formBranch"
-                                    placeholder="Chi Trưởng, Chi Hai..."
+                                    id="fundAmount"
+                                    type="number"
+                                    min={1000}
+                                    required
+                                    placeholder="1000000"
+                                    value={formAmount}
+                                    onChange={(e) => setFormAmount(e.target.value)}
+                                    className="h-11 rounded-xl border-outline-variant/60 bg-surface-container-lowest tabular-nums text-sm"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label htmlFor="fundBranch" className="text-sm font-semibold text-on-surface">
+                                    Chi phái
+                                </Label>
+                                <Input
+                                    id="fundBranch"
                                     value={formBranch}
                                     onChange={(e) => setFormBranch(e.target.value)}
-                                    className="h-10 rounded-xl border-outline-variant/60 bg-surface-container-lowest"
+                                    className="h-11 rounded-xl border-outline-variant/60 bg-surface-container-lowest text-sm"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label htmlFor="fundContributor" className="text-sm font-semibold text-on-surface">
+                                    {formType === 'INCOME' ? 'Người đóng góp' : 'Đơn vị / người nhận chi'} *
+                                </Label>
+                                <Input
+                                    id="fundContributor"
+                                    required
+                                    placeholder="Ví dụ: Ông Lê Văn Phúc"
+                                    value={formContributor}
+                                    onChange={(e) => setFormContributor(e.target.value)}
+                                    className="h-11 rounded-xl border-outline-variant/60 bg-surface-container-lowest text-sm"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label htmlFor="fundNote" className="text-sm font-semibold text-on-surface">
+                                    Ghi chú
+                                </Label>
+                                <Input
+                                    id="fundNote"
+                                    placeholder="Thông tin bổ sung (nếu có)..."
+                                    value={formNote}
+                                    onChange={(e) => setFormNote(e.target.value)}
+                                    className="h-11 rounded-xl border-outline-variant/60 bg-surface-container-lowest text-sm"
                                 />
                             </div>
                         </div>
+                        </DialogBody>
 
-                        <div className="space-y-1.5">
-                            <Label htmlFor="formAmount" className="text-xs font-semibold text-on-surface">
-                                Số Tiền (VNĐ)
-                            </Label>
-                            <Input
-                                id="formAmount"
-                                type="number"
-                                placeholder="Ví dụ: 5000000"
-                                value={formAmount}
-                                onChange={(e) => setFormAmount(e.target.value)}
-                                required
-                                className="h-10 rounded-xl border-outline-variant/60 bg-surface-container-lowest tabular-nums"
-                            />
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <Label htmlFor="formNote" className="text-xs font-semibold text-on-surface">
-                                Ghi Chú
-                            </Label>
-                            <Input
-                                id="formNote"
-                                placeholder="Chi tiết thêm..."
-                                value={formNote}
-                                onChange={(e) => setFormNote(e.target.value)}
-                                className="h-10 rounded-xl border-outline-variant/60 bg-surface-container-lowest"
-                            />
-                        </div>
-
-                        <DialogFooter className="pt-2">
+                        <DialogFooter>
                             <Button
                                 type="button"
                                 variant="ghost"
                                 onClick={() => setDialogOpen(false)}
-                                className="min-h-10 px-4 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface cursor-pointer"
+                                className="min-h-11 px-5 rounded-xl bg-surface-container-low text-on-surface cursor-pointer"
                             >
                                 Hủy
                             </Button>
                             <Button
                                 type="submit"
-                                className="min-h-10 px-5 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-semibold cursor-pointer"
+                                disabled={saving}
+                                className="min-h-11 px-6 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-semibold cursor-pointer"
                             >
-                                Lưu Phiếu
+                                {saving ? 'Đang lưu...' : editingTx ? 'Cập nhật phiếu' : 'Lưu phiếu'}
                             </Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog Xác nhận xóa */}
+            <Dialog open={!!deletingTx} onOpenChange={(open) => !open && setDeletingTx(null)}>
+                <DialogContent size="sm">
+                    <DialogHeader>
+                        <DialogTitle className="font-serif text-lg font-bold text-primary">
+                            Xác Nhận Xóa Phiếu Quỹ
+                        </DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-on-surface-variant text-pretty">
+                        Bạn có chắc chắn muốn xóa phiếu <strong className="text-on-surface">{deletingTx?.id}</strong> ({deletingTx?.title})? Số dư quỹ sẽ được tự động tính lại.
+                    </p>
+                    <DialogFooter className="pt-3">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setDeletingTx(null)}
+                            className="min-h-10 px-4 rounded-xl bg-surface-container-low text-on-surface cursor-pointer"
+                        >
+                            Hủy
+                        </Button>
+                        <Button
+                            type="button"
+                            disabled={deleting}
+                            onClick={handleConfirmDelete}
+                            className="min-h-10 px-5 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-semibold cursor-pointer"
+                        >
+                            {deleting ? 'Đang xóa...' : 'Xóa phiếu'}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

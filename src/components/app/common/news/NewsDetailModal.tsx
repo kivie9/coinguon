@@ -13,6 +13,7 @@ import { Clock, Heart, Share2, Check, X, ShieldCheck, ArrowLeft, Landmark } from
 import { triggerHaptic } from '@/utils/haptics';
 import { toast } from '@/components/ui/sonner';
 import { HomeNewsItem } from '@/components/app/common/home/homeData';
+import { ReadAloudButton } from '@/components/common/ReadAloudButton';
 
 interface NewsDetailModalProps {
     item: HomeNewsItem | null;
@@ -90,6 +91,11 @@ export const NewsDetailModal = ({
                     </div>
 
                     <div className="flex items-center gap-2 tabular-nums">
+                        <ReadAloudButton
+                            text={`${item.title}. ${item.fullSummary || item.summary}. ${(item.content || []).join(' ')}`}
+                            label="Nghe đọc"
+                        />
+
                         <Button
                             variant="ghost"
                             size="sm"

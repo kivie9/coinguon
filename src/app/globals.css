@@ -4,6 +4,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Chế độ phóng to cỡ chữ cho người cao tuổi (lưu qua data-font-scale trên html) */
+html[data-font-scale="large"] {
+  font-size: 19px;
+}
+
+html[data-font-scale="xlarge"] {
+  font-size: 22px;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -184,4 +193,18 @@
 
 @utility font-headline {
   font-family: 'Noto Serif', Georgia, serif;
+}
+
+/* Tối ưu bản in A4 cho người cao tuổi (lịch giỗ, hồ sơ thành viên) */
+@media print {
+  header,
+  nav,
+  footer,
+  .print\:hidden {
+    display: none !important;
+  }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
 }

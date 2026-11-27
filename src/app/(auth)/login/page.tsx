@@ -7,7 +7,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Mail, Lock, Loader2, LogIn, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, Loader2, LogIn } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 
 function LoginForm() {
@@ -151,7 +151,7 @@ function LoginForm() {
                 </Button>
             </form>
 
-            <div className="pt-3 border-t border-outline-variant/25 space-y-2 text-center text-sm">
+            <div className="pt-3 border-t border-outline-variant/25 text-center text-sm">
                 <p className="text-on-surface-variant">
                     Chưa có tài khoản dòng tộc?{' '}
                     <Link
@@ -161,10 +161,6 @@ function LoginForm() {
                         Đăng ký thành viên ngay
                     </Link>
                 </p>
-                <div className="flex items-center justify-center gap-1.5 text-xs text-on-surface-variant pt-1">
-                    <ShieldCheck className="size-4 text-secondary" aria-hidden="true" />
-                    <span>Hệ thống bảo mật xác thực Auth.js (D1 SQLite)</span>
-                </div>
             </div>
         </div>
     );

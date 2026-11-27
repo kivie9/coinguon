@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import {
     BookOpen,
@@ -23,13 +23,62 @@ import { NewsDetailModal } from '@/components/app/common/news/NewsDetailModal';
 import { triggerHaptic } from '@/utils/haptics';
 import { toast } from '@/components/ui/sonner';
 import { useClan } from '@/components/providers/ClanProvider';
+import { apiFetch } from '@/services/api/apiClient';
+
+interface DbNewsRow {
+    id: number;
+    title: string;
+    tag: string;
+    tagColor?: string | null;
+    summary: string;
+    content: string;
+    thumbnailUrl?: string | null;
+    authorName?: string | null;
+    likesCount?: number;
+    commentsCount?: number;
+    publishedAt?: string;
+}
 
 export const NewsListPage = () => {
     const { clan } = useClan();
+    const [newsItems, setNewsItems] = useState<HomeNewsItem[]>(HOME_NEWS_ITEMS);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedTag, setSelectedTag] = useState<string>('all');
     const [selectedNews, setSelectedNews] = useState<HomeNewsItem | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
+
+    useEffect(() => {
+        let active = true;
+        apiFetch('/api/news', { cache: 'no-store' })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((json) => {
+                if (!active || !Array.isArray(json?.data) || json.data.length === 0) return;
+                const mapped: HomeNewsItem[] = (json.data as DbNewsRow[]).map((row) => ({
+                    id: `db-${row.id}`,
+                    tag: row.tag || 'Thông báo',
+                    tagColor: row.tagColor === 'secondary' ? 'secondary' : 'primary',
+                    title: row.title,
+                    summary: row.summary,
+                    fullSummary: row.summary,
+                    content: row.content
+                        .split(/\n+/)
+                        .map((p) => p.trim())
+                        .filter(Boolean),
+                    time: row.publishedAt
+                        ? new Intl.DateTimeFormat('vi-VN').format(new Date(row.publishedAt))
+                        : 'Mới đăng',
+                    author: row.authorName || 'Ban Trị Sự',
+                    imageUrl: row.thumbnailUrl || HOME_NEWS_ITEMS[0].imageUrl,
+                    initialLikes: row.likesCount ?? 0,
+                    initialComments: row.commentsCount ?? 0,
+                }));
+                setNewsItems([...mapped, ...HOME_NEWS_ITEMS]);
+            })
+            .catch(() => {});
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const [likeMap, setLikeMap] = useState<Record<string, { count: number; liked: boolean }>>(() => {
         const initial: Record<string, { count: number; liked: boolean }> = {};
@@ -91,7 +140,7 @@ export const NewsListPage = () => {
     ];
 
     const filteredNews = useMemo(() => {
-        return HOME_NEWS_ITEMS.filter((item) => {
+        return newsItems.filter((item) => {
             const matchesTag = selectedTag === 'all' || item.tag.toLowerCase() === selectedTag.toLowerCase();
             const q = searchQuery.toLowerCase().trim();
             const matchesQuery =
@@ -102,7 +151,7 @@ export const NewsListPage = () => {
                 (item.content && item.content.some((c) => c.toLowerCase().includes(q)));
             return matchesTag && matchesQuery;
         });
-    }, [searchQuery, selectedTag]);
+    }, [newsItems, searchQuery, selectedTag]);
 
     const totalInteractions = useMemo(() => {
         return Object.values(likeMap).reduce((acc, curr) => acc + curr.count, 0) +

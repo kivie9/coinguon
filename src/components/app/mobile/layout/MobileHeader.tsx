@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { NotificationDialog } from './NotificationDialog';
 import { useClan } from '@/components/providers/ClanProvider';
 import { UserMenu } from '@/components/auth/UserMenu';
+import { FontSizeToggle } from '@/components/common/FontSizeToggle';
 
 export const MobileHeader = () => {
     const [notificationOpen, setNotificationOpen] = useState(false);
@@ -38,7 +39,9 @@ export const MobileHeader = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                        <FontSizeToggle compact />
+
                         <Button
                             variant="ghost"
                             size="icon"

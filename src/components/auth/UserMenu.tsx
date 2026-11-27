@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { RoleBadge } from './RoleBadge';
 import { AuthModal } from './AuthModal';
+import { LogoutConfirmDialog } from './LogoutConfirmDialog';
 import {
     LogIn,
     LogOut,
@@ -18,6 +19,7 @@ export function UserMenu() {
     const { user, role, isGuest, isAdmin, logout } = useAuth();
     const [authOpen, setAuthOpen] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [logoutOpen, setLogoutOpen] = useState(false);
 
     return (
         <div className="relative">
@@ -138,8 +140,8 @@ export function UserMenu() {
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        logout();
                                         setMenuOpen(false);
+                                        setLogoutOpen(true);
                                     }}
                                     className="flex items-center gap-2.5 w-full p-2.5 rounded-lg text-destructive hover:bg-destructive/10 text-sm font-medium transition-colors duration-150 cursor-pointer"
                                 >
@@ -153,6 +155,12 @@ export function UserMenu() {
             )}
 
             <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
+            <LogoutConfirmDialog
+                open={logoutOpen}
+                onOpenChange={setLogoutOpen}
+                onConfirm={logout}
+                userName={user?.fullName}
+            />
         </div>
     );
 }

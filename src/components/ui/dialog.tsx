@@ -31,7 +31,7 @@ function DialogOverlay({
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 bg-black/40 duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
@@ -39,21 +39,39 @@ function DialogOverlay({
   )
 }
 
+export type DialogSize = "sm" | "md" | "lg" | "xl"
+
+const DIALOG_SIZE_CLASSES: Record<DialogSize, string> = {
+  sm: "w-[92vw] sm:max-w-md md:max-w-lg",
+  md: "w-[94vw] sm:max-w-xl md:max-w-2xl",
+  lg: "w-[95vw] sm:max-w-2xl md:max-w-4xl lg:max-w-5xl",
+  xl: "w-[96vw] sm:max-w-3xl md:max-w-5xl lg:max-w-6xl xl:max-w-[1180px]",
+}
+
 function DialogContent({
   className,
   children,
   showCloseButton = true,
+  size = "md",
+  stickyLayout = false,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
+  size?: DialogSize
+  stickyLayout?: boolean
 }) {
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
+        data-sticky={stickyLayout ? "true" : undefined}
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "group/dialog fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-surface text-sm text-on-surface ring-1 ring-outline-variant/30 duration-150 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          stickyLayout
+            ? "flex flex-col max-h-[90dvh] overflow-hidden p-0 gap-0"
+            : "grid max-h-[92dvh] overflow-y-auto gap-5 p-5 sm:p-6 md:p-8",
+          DIALOG_SIZE_CLASSES[size],
           className
         )}
         {...props}
@@ -65,14 +83,14 @@ function DialogContent({
             render={
               <Button
                 variant="ghost"
-                className="absolute top-2 right-2"
+                aria-label="Đóng hộp thoại"
+                className="absolute top-4 right-4 z-10 size-9 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer"
                 size="icon-sm"
               />
             }
           >
-            <XIcon
-            />
-            <span className="sr-only">Close</span>
+            <XIcon className="size-4" aria-hidden="true" />
+            <span className="sr-only">Đóng</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>
@@ -84,7 +102,24 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-2", className)}
+      className={cn(
+        "flex flex-col gap-1.5 pr-12",
+        "group-data-[sticky=true]/dialog:shrink-0 group-data-[sticky=true]/dialog:px-5 group-data-[sticky=true]/dialog:sm:px-6 group-data-[sticky=true]/dialog:md:px-8 group-data-[sticky=true]/dialog:pt-5 group-data-[sticky=true]/dialog:sm:pt-6 group-data-[sticky=true]/dialog:pb-4 group-data-[sticky=true]/dialog:border-b group-data-[sticky=true]/dialog:border-outline-variant/25",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="dialog-body"
+      className={cn(
+        "flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 md:px-8 py-5",
+        className
+      )}
       {...props}
     />
   )
@@ -102,7 +137,8 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
+        "flex flex-col-reverse gap-2.5 pt-4 border-t border-outline-variant/25 sm:flex-row sm:justify-end",
+        "group-data-[sticky=true]/dialog:shrink-0 group-data-[sticky=true]/dialog:px-5 group-data-[sticky=true]/dialog:sm:px-6 group-data-[sticky=true]/dialog:md:px-8 group-data-[sticky=true]/dialog:py-4 group-data-[sticky=true]/dialog:bg-surface",
         className
       )}
       {...props}
@@ -110,7 +146,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close render={<Button variant="outline" />}>
-          Close
+          Đóng
         </DialogPrimitive.Close>
       )}
     </div>
@@ -121,10 +157,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn(
-        "font-heading text-base leading-none font-medium",
-        className
-      )}
+      className={cn("text-lg sm:text-xl leading-tight font-serif font-bold text-primary text-balance", className)}
       {...props}
     />
   )
@@ -138,7 +171,7 @@ function DialogDescription({
     <DialogPrimitive.Description
       data-slot="dialog-description"
       className={cn(
-        "text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
+        "text-sm text-on-surface-variant text-pretty *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
         className
       )}
       {...props}
@@ -148,6 +181,7 @@ function DialogDescription({
 
 export {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,

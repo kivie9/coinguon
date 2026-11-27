@@ -7,6 +7,7 @@ import { BRANCH_OPTIONS } from '@/constants/memberConstants';
 import { getRomanNumeral } from '@/utils/memberUtils';
 import { BranchFilter, GenFilter } from '@/hooks/useMemberFilter';
 import { Button } from '@/components/ui/button';
+import { VoiceSearchButton } from '@/components/common/VoiceSearchButton';
 
 interface MemberFilterBarProps {
     totalMembers: number;
@@ -61,6 +62,8 @@ export const MemberFilterBar = ({
                     )}
                 </div>
 
+                <VoiceSearchButton onResult={onSearchChange} />
+
                 {onAddNewMember && (
                     <Button
                         onClick={onAddNewMember}
@@ -85,7 +88,7 @@ export const MemberFilterBar = ({
                                 triggerHaptic('selection');
                                 onBranchChange(opt.id);
                             }}
-                            className={`min-h-8 px-3 rounded-lg text-xs shrink-0 font-medium transition-colors duration-150 cursor-pointer tabular-nums ${
+                            className={`min-h-10 px-3.5 rounded-xl text-sm shrink-0 font-medium transition-colors duration-150 cursor-pointer tabular-nums ${
                                 selectedBranch === opt.id
                                     ? 'bg-primary text-on-primary hover:bg-primary hover:text-on-primary font-semibold'
                                     : 'bg-surface-container-low text-on-surface-variant hover:text-primary hover:bg-surface-container'
@@ -104,15 +107,15 @@ export const MemberFilterBar = ({
             </div>
 
             <div className="flex items-center gap-1.5 pt-2 border-t border-outline-variant/25 overflow-x-auto no-scrollbar">
-                <span className="text-xs text-on-surface-variant font-semibold shrink-0 pr-1">Đời:</span>
+                <span className="text-sm text-on-surface-variant font-semibold shrink-0 pr-1">Đời:</span>
                 <Button
                     variant="ghost"
-                    size="xs"
+                    size="sm"
                     onClick={() => {
                         triggerHaptic('selection');
                         onGenChange('all');
                     }}
-                    className={`min-h-8 px-2.5 rounded-lg text-xs shrink-0 font-medium transition-colors duration-150 cursor-pointer ${
+                    className={`min-h-10 px-3 rounded-xl text-sm shrink-0 font-medium transition-colors duration-150 cursor-pointer ${
                         selectedGen === 'all'
                             ? 'bg-secondary text-on-secondary hover:bg-secondary hover:text-on-secondary font-bold'
                             : 'bg-surface-container-low text-on-surface-variant hover:text-primary hover:bg-surface-container'
@@ -127,12 +130,12 @@ export const MemberFilterBar = ({
                         <Button
                             key={gen}
                             variant="ghost"
-                            size="xs"
+                            size="sm"
                             onClick={() => {
                                 triggerHaptic('selection');
                                 onGenChange(gen);
                             }}
-                            className={`min-h-8 px-2.5 rounded-lg text-xs shrink-0 font-medium transition-colors duration-150 cursor-pointer ${
+                            className={`min-h-10 px-3 rounded-xl text-sm shrink-0 font-medium transition-colors duration-150 cursor-pointer ${
                                 isSelected
                                     ? 'bg-secondary text-on-secondary hover:bg-secondary hover:text-on-secondary font-bold'
                                     : 'bg-surface-container-low text-on-surface-variant hover:text-primary hover:bg-surface-container'

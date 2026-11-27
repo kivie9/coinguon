@@ -1,35 +1,28 @@
 import { NextRequest } from 'next/server';
 import { fundService } from '@/services/fundService';
 import { getAuthenticatedUser } from '@/utils/auth';
+import { recordAuditLog } from '@/utils/auditLog';
 import { apiSuccess, apiBadRequest, apiForbidden, apiError } from '@/utils/apiResponse';
 
 /**
  * GET /api/funds
- * Lấy tổng quan quỹ dòng họ và lịch sử các giao dịch thu chi
- * - Khách: Xem dữ liệu Mock
- * - Đã đăng nhập: Xem số dư và giao dịch thực tế
  */
 export async function GET(request: NextRequest) {
     try {
         const auth = await getAuthenticatedUser(request);
-
-        let overview;
-        let transactions;
-
         if (auth.isGuest) {
-            overview = fundService.getOverviewSync();
-            transactions = fundService.getTransactionsSync();
-        } else {
-            [overview, transactions] = await Promise.all([
-                fundService.getOverview(),
-                fundService.getTransactions(),
-            ]);
+            return apiError('Vui lòng đăng nhập để xem sổ quỹ dòng họ.', 401);
         }
 
+        const [overview, transactions] = await Promise.all([
+            fundService.getOverview(),
+            fundService.getTransactions(),
+        ]);
+
         return apiSuccess({ overview, transactions }, undefined, 200, {
-            isGuest: auth.isGuest,
+            isGuest: false,
             role: auth.role,
-            dataSource: auth.isGuest ? 'mock' : 'live',
+            dataSource: 'live',
         });
     } catch (error) {
         console.error('Lỗi khi lấy dữ liệu quỹ dòng họ:', error);
@@ -39,34 +32,56 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/funds
- * Ghi nhận đóng góp / thu chi quỹ mới
+ * Ghi nhận đóng góp / thu chi quỹ mới (Chỉ Quản Trị Viên)
  */
 export async function POST(request: NextRequest) {
     try {
         const auth = await getAuthenticatedUser(request);
-        if (auth.isGuest) {
-            return apiForbidden('Chế độ khách không thể tạo giao dịch. Vui lòng đăng nhập tài khoản.');
+        if (auth.isGuest || (!auth.isAdmin && !auth.isSuperAdmin)) {
+            return apiForbidden('Chỉ Quản Trị Viên mới có quyền lập phiếu thu/chi quỹ dòng họ.');
         }
 
-        const body = await request.json();
-        if (!body.title || !body.amount || !body.contributor || !body.type) {
-            return apiBadRequest('Thiếu thông tin bắt buộc: title, amount, contributor, type');
+        const body = await request.json().catch(() => ({}));
+        const title = String(body.title || '').trim();
+        const contributor = String(body.contributor || '').trim();
+        const type = body.type === 'EXPENSE' ? 'EXPENSE' : body.type === 'INCOME' ? 'INCOME' : null;
+        const amount = Number(body.amount);
+
+        if (!title || title.length > 200) {
+            return apiBadRequest('Nội dung thu/chi không hợp lệ (tối đa 200 ký tự).');
+        }
+        if (!contributor || contributor.length > 120) {
+            return apiBadRequest('Vui lòng nhập tên người/đơn vị đóng góp hoặc nhận chi.');
+        }
+        if (!type) {
+            return apiBadRequest('Loại giao dịch phải là INCOME hoặc EXPENSE.');
+        }
+        if (!Number.isFinite(amount) || amount <= 0 || amount > 100_000_000_000) {
+            return apiBadRequest('Số tiền phải lớn hơn 0 và hợp lệ.');
         }
 
         const newTx = await fundService.addTransaction({
-            type: body.type,
-            title: body.title,
-            contributor: body.contributor,
-            branch: body.branch || 'Bản Tộc',
-            amount: Number(body.amount),
-            date: body.date || new Date().toISOString(),
-            note: body.note || '',
+            type,
+            title,
+            contributor,
+            branch: String(body.branch || 'Bản Tộc').trim().slice(0, 100),
+            amount: Math.round(amount),
+            date: body.date ? String(body.date).trim() : new Date().toISOString().split('T')[0],
+            note: String(body.note || '').trim().slice(0, 500),
         });
 
-        return apiSuccess(newTx, 'Ghi nhận giao dịch quỹ thành công');
+        await recordAuditLog({
+            userId: auth.user?.id,
+            action: 'INSERT',
+            entityName: 'fund_transactions',
+            entityId: newTx.dbId || 0,
+            newValues: { code: newTx.id, type: newTx.type, title: newTx.title, amount: newTx.amount },
+            request,
+        });
+
+        return apiSuccess(newTx, 'Ghi nhận giao dịch quỹ thành công', 201);
     } catch (error) {
         console.error('Lỗi khi tạo giao dịch quỹ:', error);
         return apiError('Không thể lưu giao dịch quỹ', 500);
     }
 }
-

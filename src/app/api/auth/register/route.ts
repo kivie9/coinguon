@@ -4,13 +4,26 @@ import { db } from '@/core/database/dataSource';
 import { users } from '@/core/database/schema';
 import { hashPassword } from '@/utils/password';
 import { apiSuccess, apiBadRequest, apiError } from '@/utils/apiResponse';
+import { checkRateLimit } from '@/utils/rateLimit';
+import { getClientIp, recordAuditLog } from '@/utils/auditLog';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * POST /api/auth/register
- * Tạo tài khoản thành viên mới (Auth.js + Cloudflare D1 / SQLite)
+ * Tạo tài khoản thành viên mới (mặc định PENDING chờ Ban Quản Trị phê duyệt)
  */
 export async function POST(request: NextRequest) {
     try {
+        const ip = getClientIp(request) || 'unknown';
+        const limit = checkRateLimit(`register:${ip}`, 5, 10 * 60_000);
+        if (!limit.allowed) {
+            return apiError(
+                `Bạn thao tác quá nhiều lần. Vui lòng thử lại sau ${limit.retryAfterSeconds} giây.`,
+                429
+            );
+        }
+
         const body = await request.json().catch(() => ({}));
         const email = String(body.email || '').trim().toLowerCase();
         const password = String(body.password || '');
@@ -21,8 +34,16 @@ export async function POST(request: NextRequest) {
             return apiBadRequest('Vui lòng nhập đầy đủ họ tên, email và mật khẩu.');
         }
 
-        if (password.length < 6) {
-            return apiBadRequest('Mật khẩu phải có ít nhất 6 ký tự.');
+        if (!EMAIL_REGEX.test(email)) {
+            return apiBadRequest('Địa chỉ email không hợp lệ.');
+        }
+
+        if (fullName.length < 2 || fullName.length > 100) {
+            return apiBadRequest('Họ và tên phải từ 2 đến 100 ký tự.');
+        }
+
+        if (password.length < 8) {
+            return apiBadRequest('Mật khẩu phải có ít nhất 8 ký tự để đảm bảo an toàn.');
         }
 
         const existing = await db.query.users.findFirst({
@@ -42,9 +63,18 @@ export async function POST(request: NextRequest) {
                 fullName,
                 phone: phone || null,
                 role: 'MEMBER',
-                status: 'ACTIVE',
+                status: 'PENDING',
             })
             .returning();
+
+        await recordAuditLog({
+            userId: created.id,
+            action: 'INSERT',
+            entityName: 'users',
+            entityId: created.id,
+            newValues: { email: created.email, fullName: created.fullName, role: created.role, status: created.status },
+            request,
+        });
 
         return apiSuccess(
             {
@@ -52,8 +82,9 @@ export async function POST(request: NextRequest) {
                 email: created.email,
                 fullName: created.fullName,
                 role: created.role,
+                status: created.status,
             },
-            'Đăng ký tài khoản thành công',
+            'Đăng ký thành công! Tài khoản đang chờ Ban Quản Trị phê duyệt trước khi truy cập dữ liệu gia phả.',
             201
         );
     } catch (err) {

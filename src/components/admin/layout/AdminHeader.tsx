@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { AdminSidebar } from './AdminSidebar';
 import { UserMenu } from '@/components/auth/UserMenu';
+import { FontSizeToggle } from '@/components/common/FontSizeToggle';
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
     '/admin': {
@@ -31,9 +32,17 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
         title: 'Quản Lý Sự Kiện & Giỗ Chạp',
         subtitle: 'Lập kế hoạch ngày giỗ tổ, lễ hội dòng họ và việc hiếu hỷ',
     },
+    '/admin/news': {
+        title: 'Quản Lý Tin Tức & Thông Báo',
+        subtitle: 'Đăng tin họp họ, tuyên dương khuyến học và thông báo hiếu hỷ',
+    },
+    '/admin/clan': {
+        title: 'Cài Đặt Thông Tin Dòng Họ',
+        subtitle: 'Cập nhật tên đại tôn, tôn chỉ, thông tin từ đường và lời giới thiệu',
+    },
     '/admin/users': {
         title: 'Quản Lý Người Dùng & Phân Quyền',
-        subtitle: 'Kiểm soát tài khoản, cấp quyền Admin tối cao, Quản trị chi, Thành viên',
+        subtitle: 'Kiểm soát tài khoản, duyệt thành viên mới và phân quyền quản trị',
     },
 };
 
@@ -82,6 +91,8 @@ export function AdminHeader() {
             </div>
 
             <div className="flex items-center gap-2">
+                <FontSizeToggle compact />
+
                 <Link
                     href="/"
                     className="hidden sm:inline-flex items-center gap-2 min-h-10 text-xs font-semibold px-3.5 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-primary transition-colors duration-150"

@@ -1,8 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
 import { memberService } from '@/services/memberService';
-import { getSampleHeritageMembers } from '@/services/mappers/memberMapper';
-import { getServerAuth } from '@/utils/auth';
 import { MobileHomeDashboard } from '@/components/app/mobile/home/MobileHomeDashboard';
 import { DesktopHomeDashboard } from '@/components/app/desktop/home/DesktopHomeDashboard';
 import { ResponsiveView } from '@/components/common/ResponsiveView';
@@ -14,11 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-    const auth = await getServerAuth();
-    // Mặc định Khách (Guest) xem dữ liệu Mock, Đăng nhập xem dữ liệu CSDL thực tế
-    const members = auth.isGuest
-        ? getSampleHeritageMembers()
-        : await memberService.getAllEnrichedMembers();
+    const members = await memberService.getAllEnrichedMembers();
 
     return (
         <ResponsiveView

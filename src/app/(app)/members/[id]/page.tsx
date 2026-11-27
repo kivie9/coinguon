@@ -4,12 +4,21 @@ import { memberService } from '@/services/memberService';
 import { MemberDetailClient } from './MemberDetailClient';
 import { Metadata } from 'next';
 import { CLAN_CONFIG } from '@/config/clanConfig';
+import { getServerAuth } from '@/utils/auth';
 
 interface Props {
     params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+    const auth = await getServerAuth();
+    if (auth.isGuest) {
+        return {
+            title: `Hồ Sơ Gia Phả | ${CLAN_CONFIG.name}`,
+            description: 'Vui lòng đăng nhập để xem thông tin thành viên gia phả.',
+        };
+    }
+
     const { id } = await params;
     const member = await memberService.getMemberByIdEnriched(Number(id));
 

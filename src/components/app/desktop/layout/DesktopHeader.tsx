@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { PUBLIC_NAV_ITEMS } from '@/config/navigation';
 import { useClan } from '@/components/providers/ClanProvider';
 import { UserMenu } from '@/components/auth/UserMenu';
+import { FontSizeToggle } from '@/components/common/FontSizeToggle';
 
 export const DesktopHeader = () => {
     const pathname = usePathname();
@@ -55,6 +56,7 @@ export const DesktopHeader = () => {
                         })}
                     </nav>
 
+                    <FontSizeToggle />
                     <UserMenu />
                 </div>
             </div>

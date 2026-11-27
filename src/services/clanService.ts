@@ -1,5 +1,7 @@
+import { eq } from 'drizzle-orm';
 import { ClanDto } from '@/types/clanType';
 import { db } from '@/core/database/dataSource';
+import { clans, ancestralHalls } from '@/core/database/schema';
 import { warnDbFallback } from '@/core/database/dbStatus';
 import { INITIAL_CLAN_DATA } from '@/config/clanData';
 
@@ -121,7 +123,45 @@ export class ClanService {
                 },
             },
         };
-        return { ...clanDataStore };
+
+        // Lưu đồng bộ xuống bảng clans & ancestral_halls trong CSDL nếu khả dụng
+        try {
+            const existingClan = await db.query.clans.findFirst({
+                with: { ancestralHalls: true },
+            });
+            if (existingClan) {
+                const clanUpdate: Partial<typeof clans.$inferInsert> = {
+                    updatedAt: new Date(),
+                };
+                if (patch.name !== undefined) clanUpdate.name = patch.name;
+                if (patch.shortName !== undefined) clanUpdate.shortName = patch.shortName;
+                if (patch.hanNomName !== undefined) clanUpdate.hanNomName = patch.hanNomName;
+                if (patch.slogan !== undefined) clanUpdate.slogan = patch.slogan;
+                if (patch.subSlogan !== undefined) clanUpdate.subSlogan = patch.subSlogan;
+                if (patch.motto !== undefined) clanUpdate.motto = patch.motto;
+                if (patch.description !== undefined) clanUpdate.description = patch.description;
+                if (patch.footerCopyright !== undefined) clanUpdate.footerCopyright = patch.footerCopyright;
+                if (patch.stats?.foundedYear !== undefined) clanUpdate.foundedYear = patch.stats.foundedYear;
+
+                await db.update(clans).set(clanUpdate).where(eq(clans.id, existingClan.id));
+
+                const hall = existingClan.ancestralHalls?.[0];
+                if (hall && patch.ancestralHall) {
+                    const hallUpdate: Partial<typeof ancestralHalls.$inferInsert> = {
+                        updatedAt: new Date(),
+                    };
+                    if (patch.ancestralHall.name !== undefined) hallUpdate.name = patch.ancestralHall.name;
+                    if (patch.ancestralHall.address !== undefined) hallUpdate.address = patch.ancestralHall.address;
+                    if (patch.ancestralHall.province !== undefined) hallUpdate.province = patch.ancestralHall.province;
+                    if (patch.ancestralHall.ranking !== undefined) hallUpdate.ranking = patch.ancestralHall.ranking;
+                    await db.update(ancestralHalls).set(hallUpdate).where(eq(ancestralHalls.id, hall.id));
+                }
+            }
+        } catch (dbErr) {
+            warnDbFallback('Lỗi khi lưu thông tin dòng tộc xuống CSDL:', dbErr);
+        }
+
+        return this.getClanInfo();
     }
 }
 

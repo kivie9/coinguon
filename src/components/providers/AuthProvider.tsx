@@ -110,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return { success: false, error: msg };
             }
 
-            toast.success('Đăng ký tài khoản thành công! Bạn có thể đăng nhập ngay.');
+            toast.success('Đăng ký thành công! Tài khoản đang chờ Ban Quản Trị phê duyệt.');
             return { success: true };
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Lỗi hệ thống khi đăng ký.';
@@ -139,12 +139,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             toast.success('Đã đăng xuất thành công.');
 
             if (typeof window !== 'undefined') {
-                window.location.href = '/';
+                window.location.href = '/login';
             }
         } catch (err) {
             console.error('Lỗi khi đăng xuất:', err);
             if (typeof window !== 'undefined') {
-                window.location.href = '/';
+                window.location.href = '/login';
             }
         }
     };

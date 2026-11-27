@@ -3,15 +3,13 @@
 import React from 'react';
 import {
     BookOpen,
-    Volume2,
     Award,
     Star,
     Verified,
     Medal,
 } from 'lucide-react';
 import { MemberDto } from '@/types/memberType';
-import { triggerHaptic } from '@/utils/haptics';
-import { Button } from '@/components/ui/button';
+import { ReadAloudButton } from '@/components/common/ReadAloudButton';
 
 interface MemberBioTabProps {
     member: MemberDto;
@@ -19,20 +17,9 @@ interface MemberBioTabProps {
 
 export const MemberBioTab = ({ member }: MemberBioTabProps) => {
     const honorsList = member.honorsList || [];
-
-    const handleSpeakBio = () => {
-        triggerHaptic('medium');
-        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const textToSpeak =
-                member.bio ||
-                `${member.fullName}, ${member.roleTitle || ''}. Thành viên Lê Tộc Đại Tôn.`;
-            const utterance = new SpeechSynthesisUtterance(textToSpeak);
-            utterance.lang = 'vi-VN';
-            utterance.rate = 0.9;
-            window.speechSynthesis.speak(utterance);
-        }
-    };
+    const speakText =
+        member.bio ||
+        `${member.fullName}, ${member.roleTitle || ''}. Thành viên Lê Tộc Đại Tôn.`;
 
     return (
         <section className="space-y-4 md:space-y-6 select-none">
@@ -44,18 +31,7 @@ export const MemberBioTab = ({ member }: MemberBioTabProps) => {
                             Tiểu Sử &amp; Cống Hiến Gia Tộc
                         </h3>
                     </div>
-                    {member.bio && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleSpeakBio}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold min-h-9 px-3 rounded-lg bg-secondary/12 text-secondary hover:bg-secondary/20 transition-colors duration-150 cursor-pointer shrink-0"
-                            title="Nghe đọc giọng nói"
-                        >
-                            <Volume2 className="size-4 text-secondary" aria-hidden="true" />
-                            <span>Nghe đọc</span>
-                        </Button>
-                    )}
+                    {member.bio && <ReadAloudButton text={speakText} label="Nghe đọc tiểu sử" />}
                 </div>
 
                 <div className="text-sm sm:text-base text-on-surface leading-relaxed space-y-3 font-serif text-pretty">

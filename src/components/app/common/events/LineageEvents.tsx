@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Calendar, MapPin, Clock, ChevronRight, Bell } from 'lucide-react';
+import { Calendar, MapPin, Clock, ChevronRight, Bell, Printer } from 'lucide-react';
 import { triggerHaptic } from '@/utils/haptics';
 import { toast } from '@/components/ui/sonner';
 import { fetchEventsApi, LineageEventDto } from '@/services/api';
+import { downloadEventIcs } from '@/utils/calendarIcs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
@@ -25,12 +26,22 @@ export const LineageEvents = ({ initialEvents }: LineageEventsProps) => {
         }
     }, [initialEvents]);
 
-    const handleRemindMe = (eventTitle: string) => {
+    const handleRemindMe = (ev: LineageEventDto) => {
         triggerHaptic('medium');
-        toast.success('Đã lưu lịch nhắc tế tự', {
-            description: `Hệ thống sẽ gửi thông báo trước ngày cử hành: "${eventTitle}".`,
+        downloadEventIcs(ev);
+        toast.success('Đã tải lịch nhắc tế tự (.ics)', {
+            description: `Mở tệp vừa tải để lưu "${ev.title}" vào Lịch điện thoại (tự báo trước 1 ngày).`,
         });
     };
+
+    const handlePrintSchedule = () => {
+        triggerHaptic('light');
+        if (typeof window !== 'undefined') {
+            window.print();
+        }
+    };
+
+    const currentYear = new Date().getFullYear();
 
     if (loading) {
         return (
@@ -48,11 +59,24 @@ export const LineageEvents = ({ initialEvents }: LineageEventsProps) => {
 
     return (
         <div className="flex flex-col gap-4 pb-6 text-on-surface select-none">
-            <div className="flex items-center justify-between px-1">
-                <h2 className="font-serif text-lg font-bold text-primary uppercase">
-                    Lịch Tế Tự &amp; Kỵ Nhật
-                </h2>
-                <span className="text-xs text-secondary font-semibold tabular-nums">Năm Ất Tỵ 2025</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                <div>
+                    <h2 className="font-serif text-lg sm:text-xl font-bold text-primary uppercase">
+                        Lịch Tế Tự &amp; Kỵ Nhật
+                    </h2>
+                    <span className="text-xs sm:text-sm text-secondary font-semibold tabular-nums">
+                        Năm {currentYear}
+                    </span>
+                </div>
+
+                <Button
+                    variant="ghost"
+                    onClick={handlePrintSchedule}
+                    className="min-h-10 px-3.5 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface text-xs sm:text-sm font-semibold gap-1.5 cursor-pointer print:hidden"
+                >
+                    <Printer className="size-4 text-secondary" aria-hidden="true" />
+                    <span>In lịch giỗ năm</span>
+                </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -78,17 +102,18 @@ export const LineageEvents = ({ initialEvents }: LineageEventsProps) => {
 
                             <Button
                                 variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemindMe(ev.title)}
-                                aria-label={`Nhắc nhở sự kiện ${ev.title}`}
-                                className={`size-10 rounded-xl transition-colors duration-150 cursor-pointer shrink-0 ${
+                                size="sm"
+                                onClick={() => handleRemindMe(ev)}
+                                aria-label={`Lưu lịch nhắc sự kiện ${ev.title}`}
+                                className={`min-h-10 px-3 rounded-xl text-xs font-semibold gap-1.5 transition-colors duration-150 cursor-pointer shrink-0 print:hidden ${
                                     ev.featured
                                         ? 'bg-primary-container hover:bg-primary-container/80 text-secondary-fixed'
                                         : 'bg-surface-container-low hover:bg-surface-container text-primary'
                                 }`}
-                                title="Nhắc nhở ngày giỗ"
+                                title="Tải lịch nhắc (.ics) về điện thoại"
                             >
                                 <Bell className="size-4" aria-hidden="true" />
+                                <span>Nhắc lịch</span>
                             </Button>
                         </div>
 

@@ -1,12 +1,19 @@
+import { NextRequest } from 'next/server';
 import { memberService } from '@/services/memberService';
+import { getAuthenticatedUser } from '@/utils/auth';
 import { apiSuccess, apiError } from '@/utils/apiResponse';
 
 /**
  * GET /api/members/generations
- * Lấy danh sách các đời/thế hệ động từ CSDL kèm danh xưng và thống kê số lượng thành viên
+ * Lấy danh sách các đời/thế hệ động từ CSDL (Yêu cầu đăng nhập)
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
+        const auth = await getAuthenticatedUser(request);
+        if (auth.isGuest) {
+            return apiError('Vui lòng đăng nhập để xem thống kê thế hệ.', 401);
+        }
+
         const stats = await memberService.getGenerationStats();
         const generations = stats.map((s) => s.generation);
 
@@ -24,4 +31,3 @@ export async function GET() {
         return apiError('Không thể lấy danh sách thế hệ từ máy chủ.');
     }
 }
-

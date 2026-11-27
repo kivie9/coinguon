@@ -59,7 +59,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         where: eq(users.email, email),
                     });
 
-                    if (!dbUser || dbUser.status === 'LOCKED') {
+                    if (!dbUser || dbUser.status !== 'ACTIVE') {
                         return null;
                     }
 

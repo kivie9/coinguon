@@ -5,21 +5,33 @@ import { MemberDto } from '@/types/memberType';
 import { createMemberApi, updateMemberApi } from '@/services/api/memberApi';
 import {
     Dialog,
+    DialogBody,
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
     DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { toast } from '@/components/ui/sonner';
 import { Loader2, UserPlus, Pencil } from 'lucide-react';
+
+export interface MemberParentPreset {
+    fatherId?: number;
+    motherId?: number;
+    generationNumber: number;
+    parentName: string;
+    branch?: string;
+}
 
 interface AdminMemberModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     member?: MemberDto | null;
+    parentPreset?: MemberParentPreset | null;
     onSuccess: () => void;
 }
 
@@ -27,6 +39,7 @@ export function AdminMemberModal({
     open,
     onOpenChange,
     member,
+    parentPreset,
     onSuccess,
 }: AdminMemberModalProps) {
     const isEdit = !!member;
@@ -35,12 +48,12 @@ export function AdminMemberModal({
     const [courtesyName, setCourtesyName] = useState('');
     const [gender, setGender] = useState<'Male' | 'Female'>('Male');
     const [generationNumber, setGenerationNumber] = useState(1);
-    const [branch, setBranch] = useState('Chi Trưởng');
     const [isAlive, setIsAlive] = useState<boolean>(true);
     const [birthdaySolar, setBirthdaySolar] = useState('');
     const [deathDayLunar, setDeathDayLunar] = useState('');
     const [burialPlace, setBurialPlace] = useState('');
-    const [spouse, setSpouse] = useState('');
+    const [residence, setResidence] = useState('');
+    const [phone, setPhone] = useState('');
     const [bio, setBio] = useState('');
     const [saving, setSaving] = useState(false);
 
@@ -50,27 +63,27 @@ export function AdminMemberModal({
             setCourtesyName(member.courtesyName || '');
             setGender(member.gender?.toLowerCase() === 'female' ? 'Female' : 'Male');
             setGenerationNumber(member.generationNumber || 1);
-            setBranch(member.branch || 'Chi Trưởng');
             setIsAlive(member.isAlive ?? true);
             setBirthdaySolar(member.birthdaySolar || '');
             setDeathDayLunar(member.deathDayLunar || '');
             setBurialPlace(member.burialPlace || '');
-            setSpouse(member.spouse || '');
+            setResidence(member.residence || '');
+            setPhone(member.phone || '');
             setBio(member.bio || '');
         } else {
             setFullName('');
             setCourtesyName('');
             setGender('Male');
-            setGenerationNumber(1);
-            setBranch('Chi Trưởng');
+            setGenerationNumber(parentPreset?.generationNumber ?? 1);
             setIsAlive(true);
             setBirthdaySolar('');
             setDeathDayLunar('');
             setBurialPlace('');
-            setSpouse('');
+            setResidence('');
+            setPhone('');
             setBio('');
         }
-    }, [member, open]);
+    }, [member, parentPreset, open]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -83,26 +96,32 @@ export function AdminMemberModal({
         try {
             const payload = {
                 fullName: fullName.trim(),
+                courtesyName: courtesyName.trim() || null,
                 gender,
                 generationNumber: Number(generationNumber),
                 isAlive,
-                birthdaySolar: birthdaySolar.trim() || undefined,
-                deathDayLunar: !isAlive ? deathDayLunar.trim() || undefined : undefined,
-                bio: bio.trim() || undefined,
+                birthdaySolar: birthdaySolar.trim() || null,
+                deathDayLunar: !isAlive ? deathDayLunar.trim() || null : null,
+                burialPlace: !isAlive ? burialPlace.trim() || null : null,
+                residence: residence.trim() || null,
+                phone: phone.trim() || null,
+                bio: bio.trim() || null,
+                ...(parentPreset?.fatherId ? { fatherId: parentPreset.fatherId } : {}),
+                ...(parentPreset?.motherId ? { motherId: parentPreset.motherId } : {}),
             };
 
-            let res;
-            if (isEdit && member) {
-                res = await updateMemberApi(member.id, payload);
-            } else {
-                res = await createMemberApi(payload);
-            }
+            const res =
+                isEdit && member
+                    ? await updateMemberApi(member.id, payload)
+                    : await createMemberApi(payload);
 
             if (res.success) {
                 toast.success(
                     isEdit
                         ? 'Cập nhật thông tin thành viên thành công!'
-                        : 'Thêm mới thành viên vào phả hệ thành công!'
+                        : parentPreset
+                          ? `Đã thêm con của ${parentPreset.parentName} vào phả hệ!`
+                          : 'Thêm mới thành viên vào phả hệ thành công!'
                 );
                 onOpenChange(false);
                 onSuccess();
@@ -119,199 +138,230 @@ export function AdminMemberModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto bg-surface rounded-2xl border-0 p-6">
+            <DialogContent size="xl" stickyLayout>
                 <DialogHeader>
-                    <DialogTitle className="font-serif flex items-center gap-2 text-lg font-bold text-primary">
+                    <DialogTitle className="flex items-center gap-2.5">
                         {isEdit ? (
                             <>
-                                <Pencil className="size-5 text-secondary" aria-hidden="true" />
+                                <Pencil className="size-5 text-secondary shrink-0" aria-hidden="true" />
                                 <span>Chỉnh Sửa Hồ Sơ Thành Viên</span>
                             </>
                         ) : (
                             <>
-                                <UserPlus className="size-5 text-secondary" aria-hidden="true" />
-                                <span>Đăng Ký Thành Viên Mới</span>
+                                <UserPlus className="size-5 text-secondary shrink-0" aria-hidden="true" />
+                                <span>{parentPreset ? 'Thêm Con Trực Hệ' : 'Đăng Ký Thành Viên Mới'}</span>
                             </>
                         )}
                     </DialogTitle>
+                    <DialogDescription>
+                        Điền đầy đủ danh tính, thế hệ và thông tin cư trú / kỵ nhật để lưu vào sổ đinh bộ dòng họ.
+                    </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 py-2">
-                    <div className="space-y-1.5">
-                        <Label htmlFor="fullName" className="text-xs font-semibold text-on-surface">
-                            Họ và Tên <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                            id="fullName"
-                            placeholder="Ví dụ: Lê Văn An"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            required
-                            className="h-10 rounded-xl border-outline-variant/60 bg-surface-container-lowest"
-                        />
-                    </div>
+                <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                    <DialogBody className="space-y-5">
+                        {!isEdit && parentPreset && (
+                            <div className="p-3.5 bg-surface-container-low rounded-xl text-sm text-on-surface">
+                                Tự động liên kết là con của <strong className="text-primary">{parentPreset.parentName}</strong> — đã điền sẵn <strong>Đời thứ {parentPreset.generationNumber}</strong>.
+                            </div>
+                        )}
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                            <Label htmlFor="courtesyName" className="text-xs font-semibold text-on-surface">
-                                Tên Chữ / Tự Hiệu
-                            </Label>
-                            <Input
-                                id="courtesyName"
-                                placeholder="Ví dụ: Phúc Đức"
-                                value={courtesyName}
-                                onChange={(e) => setCourtesyName(e.target.value)}
-                                className="h-10 rounded-xl border-outline-variant/60 bg-surface-container-lowest"
-                            />
-                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6">
+                        {/* Cột 1: Thông tin định danh & thế hệ */}
+                        <div className="space-y-4 p-4 sm:p-5 rounded-xl bg-surface-container-low">
+                            <p className="text-xs font-bold uppercase text-primary">
+                                1. Danh Tính &amp; Thế Hệ
+                            </p>
 
-                        <div className="space-y-1.5">
-                            <Label htmlFor="gender" className="text-xs font-semibold text-on-surface">
-                                Giới Tính
-                            </Label>
-                            <select
-                                id="gender"
-                                value={gender}
-                                onChange={(e) => setGender(e.target.value as 'Male' | 'Female')}
-                                className="w-full h-10 rounded-xl border border-outline-variant/60 bg-surface-container-lowest px-3 text-sm text-on-surface focus-visible:outline-none focus-visible:border-primary"
-                            >
-                                <option value="Male">Nam (Đinh nam)</option>
-                                <option value="Female">Nữ giới</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                            <Label htmlFor="generation" className="text-xs font-semibold text-on-surface">
-                                Đời / Thế Hệ
-                            </Label>
-                            <Input
-                                id="generation"
-                                type="number"
-                                min={1}
-                                max={30}
-                                value={generationNumber}
-                                onChange={(e) => setGenerationNumber(Number(e.target.value))}
-                                className="h-10 rounded-xl border-outline-variant/60 bg-surface-container-lowest tabular-nums"
-                            />
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <Label htmlFor="branch" className="text-xs font-semibold text-on-surface">
-                                Chi / Nhánh Họ
-                            </Label>
-                            <Input
-                                id="branch"
-                                placeholder="Chi Trưởng, Chi Hai..."
-                                value={branch}
-                                onChange={(e) => setBranch(e.target.value)}
-                                className="h-10 rounded-xl border-outline-variant/60 bg-surface-container-lowest"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                            <Label htmlFor="isAlive" className="text-xs font-semibold text-on-surface">
-                                Tình Trạng
-                            </Label>
-                            <select
-                                id="isAlive"
-                                value={isAlive ? 'true' : 'false'}
-                                onChange={(e) => setIsAlive(e.target.value === 'true')}
-                                className="w-full h-10 rounded-xl border border-outline-variant/60 bg-surface-container-lowest px-3 text-sm text-on-surface focus-visible:outline-none focus-visible:border-primary"
-                            >
-                                <option value="true">Còn sống</option>
-                                <option value="false">Đã khuất</option>
-                            </select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <Label htmlFor="birthDay" className="text-xs font-semibold text-on-surface">
-                                Ngày / Năm Sinh
-                            </Label>
-                            <Input
-                                id="birthDay"
-                                placeholder="Ví dụ: 1985-08-15"
-                                value={birthdaySolar}
-                                onChange={(e) => setBirthdaySolar(e.target.value)}
-                                className="h-10 rounded-xl border-outline-variant/60 bg-surface-container-lowest tabular-nums"
-                            />
-                        </div>
-                    </div>
-
-                    {!isAlive && (
-                        <div className="p-4 bg-surface-container-low rounded-xl space-y-3">
                             <div className="space-y-1.5">
-                                <Label htmlFor="deathDayLunar" className="text-xs font-semibold text-on-surface">
-                                    Ngày Giỗ Âm Lịch
+                                <Label htmlFor="fullName" className="text-sm font-semibold text-on-surface">
+                                    Họ và Tên <span className="text-destructive">*</span>
                                 </Label>
                                 <Input
-                                    id="deathDayLunar"
-                                    placeholder="Ví dụ: 15/07 Âm lịch"
-                                    value={deathDayLunar}
-                                    onChange={(e) => setDeathDayLunar(e.target.value)}
-                                    className="h-10 rounded-xl border-outline-variant/60 bg-surface-container-lowest tabular-nums"
+                                    id="fullName"
+                                    placeholder="Ví dụ: Lê Văn An"
+                                    value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                    required
+                                    className="h-11 rounded-xl border-outline-variant/60 bg-surface-container-lowest text-sm"
                                 />
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label htmlFor="burialPlace" className="text-xs font-semibold text-on-surface">
-                                    Nơi An Táng / Mộ Phần
+                                <Label htmlFor="courtesyName" className="text-sm font-semibold text-on-surface">
+                                    Tên Chữ / Tự Hiệu
                                 </Label>
                                 <Input
-                                    id="burialPlace"
-                                    placeholder="Ví dụ: Nghĩa trang dòng họ, làng Đông Phù"
-                                    value={burialPlace}
-                                    onChange={(e) => setBurialPlace(e.target.value)}
-                                    className="h-10 rounded-xl border-outline-variant/60 bg-surface-container-lowest"
+                                    id="courtesyName"
+                                    placeholder="Ví dụ: Tự Phúc Đức"
+                                    value={courtesyName}
+                                    onChange={(e) => setCourtesyName(e.target.value)}
+                                    className="h-11 rounded-xl border-outline-variant/60 bg-surface-container-lowest text-sm"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="gender" className="text-sm font-semibold text-on-surface">
+                                        Giới Tính
+                                    </Label>
+                                    <Select
+                                        id="gender"
+                                        aria-label="Giới Tính"
+                                        value={gender}
+                                        onValueChange={(v) => setGender(v as 'Male' | 'Female')}
+                                        options={[
+                                            { value: 'Male', label: 'Nam (Đinh nam)' },
+                                            { value: 'Female', label: 'Nữ giới' },
+                                        ]}
+                                        className="min-h-11"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="generation" className="text-sm font-semibold text-on-surface">
+                                        Đời / Thế Hệ
+                                    </Label>
+                                    <Input
+                                        id="generation"
+                                        type="number"
+                                        min={1}
+                                        max={50}
+                                        value={generationNumber}
+                                        onChange={(e) => setGenerationNumber(Number(e.target.value))}
+                                        className="h-11 rounded-xl border-outline-variant/60 bg-surface-container-lowest tabular-nums text-sm"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="isAlive" className="text-sm font-semibold text-on-surface">
+                                        Tình Trạng
+                                    </Label>
+                                    <Select
+                                        id="isAlive"
+                                        aria-label="Tình Trạng"
+                                        value={isAlive ? 'true' : 'false'}
+                                        onValueChange={(v) => setIsAlive(v === 'true')}
+                                        options={[
+                                            { value: 'true', label: 'Còn sống' },
+                                            { value: 'false', label: 'Đã khuất' },
+                                        ]}
+                                        className="min-h-11"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="birthDay" className="text-sm font-semibold text-on-surface">
+                                        Ngày / Năm Sinh
+                                    </Label>
+                                    <Input
+                                        id="birthDay"
+                                        placeholder="Ví dụ: 1985-08-15"
+                                        value={birthdaySolar}
+                                        onChange={(e) => setBirthdaySolar(e.target.value)}
+                                        className="h-11 rounded-xl border-outline-variant/60 bg-surface-container-lowest tabular-nums text-sm"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Cột 2: Liên hệ, Kỵ nhật & Phả ký */}
+                        <div className="space-y-4 p-4 sm:p-5 rounded-xl bg-surface-container-low">
+                            <p className="text-xs font-bold uppercase text-primary">
+                                2. Liên Hệ, Mộ Phần &amp; Phả Ký
+                            </p>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="memberPhone" className="text-sm font-semibold text-on-surface">
+                                        Số Điện Thoại
+                                    </Label>
+                                    <Input
+                                        id="memberPhone"
+                                        placeholder="0912..."
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        className="h-11 rounded-xl border-outline-variant/60 bg-surface-container-lowest tabular-nums text-sm"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="memberResidence" className="text-sm font-semibold text-on-surface">
+                                        Nơi Cư Trú Hiện Nay
+                                    </Label>
+                                    <Input
+                                        id="memberResidence"
+                                        placeholder="Hà Nội, Hải Dương..."
+                                        value={residence}
+                                        onChange={(e) => setResidence(e.target.value)}
+                                        className="h-11 rounded-xl border-outline-variant/60 bg-surface-container-lowest text-sm"
+                                    />
+                                </div>
+                            </div>
+
+                            {!isAlive && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3.5 bg-surface-container rounded-xl">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="deathDayLunar" className="text-sm font-semibold text-on-surface">
+                                            Ngày Giỗ Âm Lịch
+                                        </Label>
+                                        <Input
+                                            id="deathDayLunar"
+                                            placeholder="15/07 Âm lịch"
+                                            value={deathDayLunar}
+                                            onChange={(e) => setDeathDayLunar(e.target.value)}
+                                            className="h-11 rounded-xl border-outline-variant/60 bg-surface-container-lowest tabular-nums text-sm"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="burialPlace" className="text-sm font-semibold text-on-surface">
+                                            Nơi An Táng / Mộ Phần
+                                        </Label>
+                                        <Input
+                                            id="burialPlace"
+                                            placeholder="Nghĩa trang dòng họ..."
+                                            value={burialPlace}
+                                            onChange={(e) => setBurialPlace(e.target.value)}
+                                            className="h-11 rounded-xl border-outline-variant/60 bg-surface-container-lowest text-sm"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="space-y-1.5">
+                                <Label htmlFor="bio" className="text-sm font-semibold text-on-surface">
+                                    Tiểu Sử / Phả Ký Ghi Chép
+                                </Label>
+                                <textarea
+                                    id="bio"
+                                    rows={isAlive ? 6 : 4}
+                                    placeholder="Ghi chép công trạng, học vấn, chức tước hoặc tiểu sử..."
+                                    value={bio}
+                                    onChange={(e) => setBio(e.target.value)}
+                                    className="w-full rounded-xl border border-outline-variant/60 bg-surface-container-lowest p-3.5 text-sm text-on-surface leading-relaxed focus-visible:outline-none focus-visible:border-primary"
                                 />
                             </div>
                         </div>
-                    )}
+                        </div>
+                    </DialogBody>
 
-                    <div className="space-y-1.5">
-                        <Label htmlFor="spouse" className="text-xs font-semibold text-on-surface">
-                            Phối Ngẫu (Vợ / Chồng)
-                        </Label>
-                        <Input
-                            id="spouse"
-                            placeholder="Ví dụ: Trần Thị Mai"
-                            value={spouse}
-                            onChange={(e) => setSpouse(e.target.value)}
-                            className="h-10 rounded-xl border-outline-variant/60 bg-surface-container-lowest"
-                        />
-                    </div>
-
-                    <div className="space-y-1.5">
-                        <Label htmlFor="bio" className="text-xs font-semibold text-on-surface">
-                            Tiểu Sử / Phả Ký Ghi Chép
-                        </Label>
-                        <textarea
-                            id="bio"
-                            rows={3}
-                            placeholder="Ghi chép công trạng, học vấn, chức tước hoặc tiểu sử..."
-                            value={bio}
-                            onChange={(e) => setBio(e.target.value)}
-                            className="w-full rounded-xl border border-outline-variant/60 bg-surface-container-lowest p-3 text-sm text-on-surface focus-visible:outline-none focus-visible:border-primary"
-                        />
-                    </div>
-
-                    <DialogFooter className="pt-2">
+                    <DialogFooter>
                         <Button
                             type="button"
                             variant="ghost"
                             onClick={() => onOpenChange(false)}
                             disabled={saving}
-                            className="min-h-10 px-4 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface cursor-pointer"
+                            className="min-h-11 px-5 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-medium cursor-pointer"
                         >
                             Hủy bỏ
                         </Button>
                         <Button
                             type="submit"
                             disabled={saving}
-                            className="min-h-10 px-5 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-semibold cursor-pointer"
+                            className="min-h-11 px-6 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-semibold cursor-pointer"
                         >
                             {saving ? (
                                 <>

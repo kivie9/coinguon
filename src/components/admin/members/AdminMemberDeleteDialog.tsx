@@ -53,7 +53,7 @@ export function AdminMemberDeleteDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md bg-surface rounded-2xl border-0 p-6">
+            <DialogContent size="sm">
                 <DialogHeader>
                     <DialogTitle className="font-serif flex items-center gap-2 text-destructive font-bold text-lg">
                         <AlertTriangle className="size-5 text-destructive" aria-hidden="true" />

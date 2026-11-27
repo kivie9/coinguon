@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -13,9 +13,12 @@ import {
     ChevronRight,
     UserCog,
     LogOut,
+    Newspaper,
+    Landmark,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { LogoutConfirmDialog } from '@/components/auth/LogoutConfirmDialog';
 
 interface NavItem {
     label: string;
@@ -46,6 +49,16 @@ const NAV_ITEMS: NavItem[] = [
         icon: Calendar,
     },
     {
+        label: 'Tin tức & Thông báo',
+        href: '/admin/news',
+        icon: Newspaper,
+    },
+    {
+        label: 'Thông tin Dòng họ',
+        href: '/admin/clan',
+        icon: Landmark,
+    },
+    {
         label: 'Người dùng & Phân quyền',
         href: '/admin/users',
         icon: UserCog,
@@ -61,6 +74,7 @@ interface AdminSidebarProps {
 export function AdminSidebar({ className, onCloseMobile }: AdminSidebarProps) {
     const pathname = usePathname();
     const { user, role, isSuperAdmin, logout } = useAuth();
+    const [logoutOpen, setLogoutOpen] = useState(false);
 
     const isActive = (href: string) => {
         if (href === '/admin') {
@@ -155,7 +169,7 @@ export function AdminSidebar({ className, onCloseMobile }: AdminSidebarProps) {
                     </div>
                     <button
                         type="button"
-                        onClick={logout}
+                        onClick={() => setLogoutOpen(true)}
                         aria-label="Đăng xuất"
                         title="Đăng xuất"
                         className="size-9 rounded-lg flex items-center justify-center text-on-tertiary/70 hover:text-on-tertiary hover:bg-primary transition-colors duration-150 cursor-pointer shrink-0"
@@ -164,6 +178,13 @@ export function AdminSidebar({ className, onCloseMobile }: AdminSidebarProps) {
                     </button>
                 </div>
             </div>
+
+            <LogoutConfirmDialog
+                open={logoutOpen}
+                onOpenChange={setLogoutOpen}
+                onConfirm={logout}
+                userName={user?.fullName}
+            />
         </aside>
     );
 }

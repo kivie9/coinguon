@@ -36,6 +36,9 @@ import {
     DialogDescription,
 } from '@/components/ui/dialog';
 import { DesktopMemberDetailView } from './DesktopMemberDetailView';
+import { VoiceSearchButton } from '@/components/common/VoiceSearchButton';
+import { RelationshipLookupModal } from '@/components/app/common/members/RelationshipLookupModal';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 export interface DesktopMemberExplorerProps {
     members: MemberDto[];
@@ -51,7 +54,9 @@ export const DesktopMemberExplorer = ({
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
     const [statusFilter, setStatusFilter] = useState<'ALL' | 'LIVING' | 'DECEASED'>('ALL');
     const [detailMember, setDetailMember] = useState<MemberDto | null>(null);
+    const [relModalOpen, setRelModalOpen] = useState(false);
     const { clan } = useClan();
+    const { user } = useAuth();
 
     React.useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -141,26 +146,52 @@ export const DesktopMemberExplorer = ({
 
             {/* 2. THANH CÔNG CỤ ĐIỀU KHIỂN & BỘ LỌC PHẲNG */}
             <div className="bg-surface-container-lowest rounded-2xl p-5 flex flex-col gap-4">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div className="relative flex-1 w-full max-w-xl">
-                        <Search className="size-4 text-secondary absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
-                        <input
-                            type="text"
-                            aria-label="Tìm kiếm thành viên"
-                            placeholder="Tìm kiếm theo họ tên, tự hiệu, chức tước, quê quán..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full h-11 pl-10 pr-10 bg-surface text-on-surface text-sm rounded-xl border border-outline-variant/60 placeholder:text-outline focus:outline-none focus:border-primary transition-colors duration-150"
-                        />
-                        {searchQuery && (
+                <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 flex-1 w-full max-w-2xl">
+                        <div className="relative flex-1">
+                            <Search className="size-4 text-secondary absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
+                            <input
+                                type="text"
+                                aria-label="Tìm kiếm thành viên"
+                                placeholder="Tìm kiếm theo họ tên, tự hiệu, chức tước, quê quán..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full h-11 pl-10 pr-10 bg-surface text-on-surface text-sm rounded-xl border border-outline-variant/60 placeholder:text-outline focus:outline-none focus:border-primary transition-colors duration-150"
+                            />
+                            {searchQuery && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon-xs"
+                                    onClick={() => setSearchQuery('')}
+                                    aria-label="Xóa từ khóa tìm kiếm"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-primary transition-colors duration-150 cursor-pointer"
+                                >
+                                    <X className="size-4" aria-hidden="true" />
+                                </Button>
+                            )}
+                        </div>
+
+                        <VoiceSearchButton onResult={setSearchQuery} />
+
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setRelModalOpen(true)}
+                            className="min-h-11 px-3.5 rounded-xl bg-secondary/12 hover:bg-secondary/20 text-secondary font-semibold text-sm shrink-0 gap-1.5 cursor-pointer"
+                        >
+                            <Users className="size-4" aria-hidden="true" />
+                            <span>Tra cứu vai vế</span>
+                        </Button>
+
+                        {user?.linkedMember && (
                             <Button
+                                type="button"
                                 variant="ghost"
-                                size="icon-xs"
-                                onClick={() => setSearchQuery('')}
-                                aria-label="Xóa từ khóa tìm kiếm"
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-primary transition-colors duration-150 cursor-pointer"
+                                onClick={() => handleViewMemberDetails(user.linkedMember!.id)}
+                                className="min-h-11 px-3.5 rounded-xl bg-primary/10 hover:bg-primary/15 text-primary font-semibold text-sm shrink-0 gap-1.5 cursor-pointer"
                             >
-                                <X className="size-4" aria-hidden="true" />
+                                <User className="size-4" aria-hidden="true" />
+                                <span>Hồ sơ của tôi</span>
                             </Button>
                         )}
                     </div>
@@ -539,6 +570,12 @@ export const DesktopMemberExplorer = ({
                     )}
                 </DialogContent>
             </Dialog>
+
+            <RelationshipLookupModal
+                open={relModalOpen}
+                onOpenChange={setRelModalOpen}
+                members={members}
+            />
         </div>
     );
 };

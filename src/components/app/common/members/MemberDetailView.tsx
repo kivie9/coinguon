@@ -65,6 +65,7 @@ export const MemberDetailView = ({ member, onBack }: MemberDetailViewProps) => {
                 <MemberQuickActions
                     phone={member.phone}
                     fullName={member.fullName}
+                    isAlive={member.isAlive}
                     onViewTree={handleViewTree}
                 />
 

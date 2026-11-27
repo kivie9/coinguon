@@ -12,8 +12,8 @@ import { apiSuccess, apiForbidden, apiError } from '@/utils/apiResponse';
 export async function GET(request: NextRequest) {
     try {
         const auth = await getAuthenticatedUser(request);
-        if (!auth.isAdmin && !auth.isSuperAdmin) {
-            return apiForbidden('Chỉ Quản Trị Viên mới có quyền xem danh sách người dùng.');
+        if (!auth.isSuperAdmin) {
+            return apiForbidden('Chỉ Admin Tối Cao (SUPER_ADMIN) mới có quyền xem danh sách người dùng.');
         }
 
         const { searchParams } = new URL(request.url);
